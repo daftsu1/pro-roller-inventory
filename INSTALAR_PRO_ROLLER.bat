@@ -23,33 +23,158 @@ echo.
 echo [1/6] Verificando requisitos...
 echo.
 
-REM Verificar PHP
+REM Directorio temporal para descargas
+set TEMP_DOWNLOAD=%TEMP%\pro-roller-installers
+if not exist "%TEMP_DOWNLOAD%" (
+    mkdir "%TEMP_DOWNLOAD%"
+)
+
+REM Verificar PHP/XAMPP
 php -v >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
-    echo [X] ERROR: PHP no encontrado
+    echo [X] PHP/XAMPP no encontrado
     echo.
-    echo Por favor instala XAMPP primero:
-    echo https://www.apachefriends.org/download.html
+    echo [!] Descargando instalador de XAMPP...
+    echo     Esto puede tardar varios minutos...
     echo.
-    echo Después de instalar XAMPP, ejecuta este instalador nuevamente.
+    
+    REM Descargar XAMPP (versión más reciente)
+    REM Nota: La URL puede cambiar, ajusta según sea necesario
+    powershell -Command "try { $ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri 'https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/8.2.12/xampp-windows-x64-8.2.12-0-VS16-installer.exe' -OutFile '%TEMP_DOWNLOAD%\xampp-installer.exe' -UseBasicParsing; Write-Host '[✓] Descarga completada' } catch { Write-Host '[ERROR] No se pudo descargar XAMPP'; Write-Host 'Descarga manualmente desde: https://www.apachefriends.org/download.html'; exit 1 }"
+    
+    if %ERRORLEVEL% NEQ 0 (
+        echo.
+        echo [!] No se pudo descargar automáticamente.
+        echo.
+        echo Por favor descarga XAMPP manualmente desde:
+        echo https://www.apachefriends.org/download.html
+        echo.
+        echo Después de instalarlo, ejecuta este instalador nuevamente.
+        pause
+        exit /b 1
+    )
+    
+    echo.
+    echo ============================================
+    echo   INSTALACIÓN DE XAMPP
+    echo ============================================
+    echo.
+    echo Se abrirá el instalador de XAMPP.
+    echo.
+    echo IMPORTANTE: Durante la instalación:
+    echo - Acepta todos los pasos del instalador
+    echo - Selecciona la opción para agregar PHP al PATH (si aparece)
+    echo - Completa toda la instalación
+    echo.
+    echo Después de instalar XAMPP, CIERRA el instalador
+    echo y presiona cualquier tecla aquí para continuar...
+    echo.
     pause
-    exit /b 1
+    
+    REM Abrir instalador de XAMPP
+    start /wait "" "%TEMP_DOWNLOAD%\xampp-installer.exe"
+    
+    echo.
+    echo Verificando instalación de XAMPP...
+    timeout /t 3 >nul
+    
+    REM Verificar nuevamente
+    php -v >nul 2>&1
+    if %ERRORLEVEL% NEQ 0 (
+        echo.
+        echo [!] XAMPP aún no está instalado correctamente.
+        echo.
+        echo Por favor asegúrate de:
+        echo 1. Completar toda la instalación de XAMPP
+        echo 2. Reiniciar esta ventana (PowerShell/CMD)
+        echo 3. Ejecutar este instalador nuevamente
+        echo.
+        pause
+        exit /b 1
+    )
+    
+    echo [✓] XAMPP instalado correctamente
+    echo.
+    echo [!] IMPORTANTE: Es posible que necesites reiniciar esta ventana
+    echo    para que PHP sea reconocido. Si el siguiente paso falla,
+    echo    cierra esta ventana, ábrela nuevamente y ejecuta este script.
+    echo.
+    pause
+) else (
+    echo [✓] PHP/XAMPP detectado
 )
-echo [✓] PHP detectado
 
 REM Verificar Composer
 composer --version >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
-    echo [X] ERROR: Composer no encontrado
     echo.
-    echo Por favor instala Composer primero:
-    echo https://getcomposer.org/download/
+    echo [X] Composer no encontrado
     echo.
-    echo Después de instalar Composer, ejecuta este instalador nuevamente.
+    echo [!] Descargando instalador de Composer...
+    
+    REM Descargar Composer-Setup.exe
+    powershell -Command "try { $ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri 'https://getcomposer.org/Composer-Setup.exe' -OutFile '%TEMP_DOWNLOAD%\composer-setup.exe' -UseBasicParsing; Write-Host '[✓] Descarga completada' } catch { Write-Host '[ERROR] No se pudo descargar Composer'; Write-Host 'Descarga manualmente desde: https://getcomposer.org/download/'; exit 1 }"
+    
+    if %ERRORLEVEL% NEQ 0 (
+        echo.
+        echo [!] No se pudo descargar automáticamente.
+        echo.
+        echo Por favor descarga Composer manualmente desde:
+        echo https://getcomposer.org/download/
+        echo.
+        echo Después de instalarlo, ejecuta este instalador nuevamente.
+        pause
+        exit /b 1
+    )
+    
+    echo.
+    echo ============================================
+    echo   INSTALACIÓN DE COMPOSER
+    echo ============================================
+    echo.
+    echo Se abrirá el instalador de Composer.
+    echo.
+    echo IMPORTANTE: Durante la instalación:
+    echo - Selecciona "Add to PATH" si aparece la opción
+    echo - Completa toda la instalación
+    echo.
+    echo Después de instalar Composer, CIERRA el instalador
+    echo y presiona cualquier tecla aquí para continuar...
+    echo.
     pause
-    exit /b 1
+    
+    REM Abrir instalador de Composer
+    start /wait "" "%TEMP_DOWNLOAD%\composer-setup.exe"
+    
+    echo.
+    echo Verificando instalación de Composer...
+    timeout /t 3 >nul
+    
+    REM Verificar nuevamente
+    composer --version >nul 2>&1
+    if %ERRORLEVEL% NEQ 0 (
+        echo.
+        echo [!] Composer aún no está instalado correctamente.
+        echo.
+        echo Por favor asegúrate de:
+        echo 1. Completar toda la instalación de Composer
+        echo 2. Reiniciar esta ventana (PowerShell/CMD)
+        echo 3. Ejecutar este instalador nuevamente
+        echo.
+        pause
+        exit /b 1
+    )
+    
+    echo [✓] Composer instalado correctamente
+    echo.
+    echo [!] IMPORTANTE: Es posible que necesites reiniciar esta ventana
+    echo    para que Composer sea reconocido. Si el siguiente paso falla,
+    echo    cierra esta ventana, ábrela nuevamente y ejecuta este script.
+    echo.
+    pause
+) else (
+    echo [✓] Composer detectado
 )
-echo [✓] Composer detectado
 
 REM Verificar MySQL
 mysql -u root -e "SELECT 1" >nul 2>&1
@@ -180,6 +305,13 @@ REM Publicar migraciones de Spatie
 php artisan vendor:publish --provider="Spatie\Permission\PermissionServiceProvider" --quiet >nul 2>&1
 
 echo [✓] Sistema configurado
+
+echo.
+echo ============================================
+echo.
+echo Limpiando archivos temporales...
+del /q "%TEMP_DOWNLOAD%\*.exe" >nul 2>&1
+rmdir /s /q "%TEMP_DOWNLOAD%" >nul 2>&1
 
 echo.
 echo ============================================
