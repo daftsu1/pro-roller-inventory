@@ -1,5 +1,6 @@
 @echo off
-chcp 65001 >nul
+setlocal enabledelayedexpansion
+chcp 65001 >nul 2>&1
 cls
 echo ============================================
 echo   INSTALADOR AUTOMATICO - pro roller
@@ -10,6 +11,11 @@ echo el sistema pro roller automáticamente.
 echo.
 echo Presiona cualquier tecla para continuar...
 pause >nul
+if errorlevel 1 (
+    echo Error al iniciar. Presiona cualquier tecla para salir...
+    pause >nul
+    exit /b 1
+)
 cls
 
 REM Directorio donde se instalará el sistema
@@ -39,24 +45,9 @@ if %ERRORLEVEL% NEQ 0 (
     echo.
     
     REM Descargar XAMPP desde SourceForge (repositorio oficial)
-    REM Verificar primero que la URL sea accesible, luego descargar
-    echo        Verificando disponibilidad de XAMPP...
-    powershell -Command "$ErrorActionPreference = 'Stop'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { $testUrl = 'https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/8.2.12/xampp-windows-x64-8.2.12-0-VS16-installer.exe'; $response = Invoke-WebRequest -Uri $testUrl -Method Head -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop; if ($response.StatusCode -ne 200) { throw 'URL no disponible' }; Write-Host '[✓] URL verificada, iniciando descarga...' } catch { Write-Host '[ERROR] No se puede acceder a la URL de XAMPP'; Write-Host 'Esto puede ser porque:'; Write-Host '- La versión específica ya no está disponible'; Write-Host '- Problemas de conexión'; Write-Host ''; Write-Host 'SOLUCIÓN: Descarga XAMPP manualmente desde:'; Write-Host 'https://www.apachefriends.org/download.html'; exit 1 }"
-    
-    if %ERRORLEVEL% NEQ 0 (
-        echo.
-        echo [!] No se pudo verificar la URL de XAMPP.
-        echo.
-        echo Por favor descarga XAMPP manualmente desde:
-        echo https://www.apachefriends.org/download.html
-        echo.
-        echo Después de instalarlo, ejecuta este instalador nuevamente.
-        pause
-        exit /b 1
-    )
-    
     echo        Descargando XAMPP (esto puede tardar varios minutos)...
-    powershell -Command "$ErrorActionPreference = 'Stop'; try { $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $url = 'https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/8.2.12/xampp-windows-x64-8.2.12-0-VS16-installer.exe/download'; $output = '%TEMP_DOWNLOAD%\xampp-installer.exe'; Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -TimeoutSec 600 -UserAgent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'; Write-Host '[✓] Descarga completada' } catch { Write-Host '[ERROR] Error durante la descarga de XAMPP'; Write-Host 'Error:' $_.Exception.Message; Write-Host ''; Write-Host 'Descarga manualmente desde: https://www.apachefriends.org/download.html'; exit 1 }"
+    echo        Por favor espera, el archivo es grande (~150MB)...
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "& { $ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $url1 = 'https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/8.2.12/xampp-windows-x64-8.2.12-0-VS16-installer.exe/download'; $url2 = 'https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/8.2.12/xampp-windows-x64-8.2.12-0-VS16-installer.exe'; $output = '%TEMP_DOWNLOAD%\xampp-installer.exe'; $success = $false; try { Invoke-WebRequest -Uri $url1 -OutFile $output -UseBasicParsing -TimeoutSec 600 -UserAgent 'Mozilla/5.0' -MaximumRedirection 5 -ErrorAction Stop; $success = $true; Write-Host '[OK] Descarga completada' } catch { try { Write-Host 'Intentando URL alternativa...'; Invoke-WebRequest -Uri $url2 -OutFile $output -UseBasicParsing -TimeoutSec 600 -UserAgent 'Mozilla/5.0' -MaximumRedirection 5 -ErrorAction Stop; $success = $true; Write-Host '[OK] Descarga completada' } catch { Write-Host '[ERROR] Error durante la descarga'; Write-Host $_.Exception.Message; exit 1 } } }"
     
     if %ERRORLEVEL% NEQ 0 (
         echo.
@@ -129,8 +120,24 @@ if %ERRORLEVEL% NEQ 0 (
     echo [!] Descargando instalador de Composer...
     
     REM Descargar Composer-Setup.exe
-    echo        Intentando descargar Composer...
-    powershell -Command "$ErrorActionPreference = 'Stop'; try { $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $url = 'https://getcomposer.org/Composer-Setup.exe'; $output = '%TEMP_DOWNLOAD%\composer-setup.exe'; Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -TimeoutSec 300; Write-Host '[✓] Descarga completada' } catch { Write-Host '[ERROR] No se pudo descargar Composer automáticamente'; Write-Host 'Error:' $_.Exception.Message; Write-Host ''; Write-Host 'OPCIÓN ALTERNATIVA:'; Write-Host '1. Ve a: https://getcomposer.org/download/'; Write-Host '2. Descarga Composer-Setup.exe'; Write-Host '3. Instálalo'; Write-Host '4. Ejecuta este instalador nuevamente'; exit 1 }"
+    REM Verificar primero la URL, luego descargar
+    echo        Verificando disponibilidad de Composer...
+    powershell -Command "$ErrorActionPreference = 'Stop'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { $testUrl = 'https://getcomposer.org/Composer-Setup.exe'; $response = Invoke-WebRequest -Uri $testUrl -Method Head -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop; if ($response.StatusCode -ne 200) { throw 'URL no disponible' }; Write-Host '[✓] URL verificada, iniciando descarga...' } catch { Write-Host '[ERROR] No se puede acceder a la URL de Composer'; Write-Host 'Esto puede ser por problemas de conexión'; Write-Host ''; Write-Host 'SOLUCIÓN: Descarga Composer manualmente desde:'; Write-Host 'https://getcomposer.org/download/'; exit 1 }"
+    
+    if %ERRORLEVEL% NEQ 0 (
+        echo.
+        echo [!] No se pudo verificar la URL de Composer.
+        echo.
+        echo Por favor descarga Composer manualmente desde:
+        echo https://getcomposer.org/download/
+        echo.
+        echo Después de instalarlo, ejecuta este instalador nuevamente.
+        pause
+        exit /b 1
+    )
+    
+    echo        Descargando Composer...
+    powershell -Command "$ErrorActionPreference = 'Stop'; try { $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $url = 'https://getcomposer.org/Composer-Setup.exe'; $output = '%TEMP_DOWNLOAD%\composer-setup.exe'; Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -TimeoutSec 300 -UserAgent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'; Write-Host '[✓] Descarga completada' } catch { Write-Host '[ERROR] Error durante la descarga de Composer'; Write-Host 'Error:' $_.Exception.Message; Write-Host ''; Write-Host 'Descarga manualmente desde: https://getcomposer.org/download/'; exit 1 }"
     
     if %ERRORLEVEL% NEQ 0 (
         echo.
