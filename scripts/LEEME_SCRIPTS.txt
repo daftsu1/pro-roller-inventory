@@ -1,0 +1,127 @@
+============================================
+  SCRIPTS DE INSTALACIÓN Y ACTUALIZACIÓN
+  pro roller
+============================================
+
+Este directorio contiene scripts automatizados para facilitar la instalación 
+y mantenimiento del sistema pro roller.
+
+ARCHIVOS INCLUIDOS:
+
+1. instalar.bat
+   Descripción: Instalación completa del sistema
+   Cuándo usar: Primera vez que instalas el sistema
+   Qué hace:
+     - Verifica PHP, Composer y MySQL
+     - Instala dependencias (composer install)
+     - Configura archivo .env automáticamente
+     - Crea base de datos 'pro_roller'
+     - Ejecuta migraciones y seeders
+   
+   Uso: Ejecuta este archivo desde la raíz del proyecto
+
+2. actualizar.bat
+   Descripción: Actualiza el sistema a la última versión
+   Cuándo usar: Cuando hay actualizaciones disponibles
+   Qué hace:
+     - Detecta si tienes Git instalado
+     - Si hay Git: usa 'git pull' para actualizar
+     - Si no hay Git: descarga ZIP desde GitHub
+     - Crea backup automático de la base de datos
+     - Ejecuta migraciones automáticamente
+     - Actualiza dependencias si es necesario
+     - Limpia caché
+   
+   Uso: Ejecuta este archivo desde la raíz del proyecto
+
+3. iniciar.bat
+   Descripción: Inicia el servidor de desarrollo
+   Cuándo usar: Cuando quieras usar el sistema
+   Qué hace:
+     - Inicia php artisan serve
+     - Abre el sistema en http://localhost:8000
+   
+   Uso: Ejecuta este archivo desde la raíz del proyecto
+
+============================================
+  INSTRUCCIONES DE USO
+============================================
+
+PRIMERA INSTALACIÓN:
+
+1. Asegúrate de tener:
+   - XAMPP instalado y MySQL corriendo
+   - Composer instalado (https://getcomposer.org)
+   - Git instalado (opcional, para actualizaciones más rápidas)
+
+2. Clona o descarga el proyecto:
+   - Si tienes Git: git clone git@github.com:daftsu1/pro-roller-inventory.git
+   - Si no tienes Git: Descarga ZIP desde GitHub y extráelo
+
+3. Abre una terminal (PowerShell o CMD) en la carpeta del proyecto
+
+4. Ejecuta: scripts\instalar.bat
+   (O doble clic en el archivo instalar.bat)
+
+5. Espera a que termine la instalación
+
+6. Para iniciar el sistema, ejecuta: scripts\iniciar.bat
+
+ACTUALIZAR EL SISTEMA:
+
+1. Asegúrate de que el sistema esté detenido (Ctrl+C en la terminal)
+
+2. Ejecuta: scripts\actualizar.bat
+
+3. Espera a que termine la actualización
+
+4. Reinicia el sistema con: scripts\iniciar.bat
+
+INICIAR EL SISTEMA:
+
+1. Ejecuta: scripts\iniciar.bat
+
+2. Abre tu navegador en: http://localhost:8000
+
+3. Inicia sesión con tus credenciales
+
+============================================
+  NOTAS IMPORTANTES
+============================================
+
+- Los scripts deben ejecutarse desde la raíz del proyecto
+  (donde está el archivo composer.json)
+
+- El script actualizar.bat crea backups automáticos en:
+  storage\backups\
+
+- Si actualizas sin Git, el script descarga la última versión
+  desde GitHub automáticamente
+
+- Los backups tienen formato: backup_YYYYMMDD_HHMMSS.sql
+
+- Si encuentras algún problema, revisa los mensajes de error
+  o contacta al administrador
+
+============================================
+  SOLUCIÓN DE PROBLEMAS
+============================================
+
+Error: "PHP no encontrado"
+  Solución: Instala XAMPP y asegúrate de que PHP esté en el PATH
+
+Error: "Composer no encontrado"
+  Solución: Instala Composer desde https://getcomposer.org/download/
+
+Error: "MySQL no responde"
+  Solución: Abre XAMPP Control Panel y inicia MySQL
+
+Error: "El sistema no está instalado"
+  Solución: Ejecuta primero instalar.bat
+
+Si tienes problemas con la actualización sin Git:
+  - Asegúrate de tener conexión a internet
+  - Verifica que GitHub esté accesible
+  - Intenta ejecutar el script como Administrador
+
+============================================
