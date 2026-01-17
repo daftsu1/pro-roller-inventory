@@ -39,8 +39,9 @@ if %ERRORLEVEL% NEQ 0 (
     echo.
     
     REM Descargar XAMPP (versión más reciente)
-    REM Nota: La URL puede cambiar, ajusta según sea necesario
-    powershell -Command "try { $ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri 'https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/8.2.12/xampp-windows-x64-8.2.12-0-VS16-installer.exe' -OutFile '%TEMP_DOWNLOAD%\xampp-installer.exe' -UseBasicParsing; Write-Host '[✓] Descarga completada' } catch { Write-Host '[ERROR] No se pudo descargar XAMPP'; Write-Host 'Descarga manualmente desde: https://www.apachefriends.org/download.html'; exit 1 }"
+    REM Usar URL directa de ApacheFriends (más confiable que SourceForge)
+    echo        Intentando descargar desde ApacheFriends...
+    powershell -Command "$ErrorActionPreference = 'Stop'; try { $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $url = 'https://www.apachefriends.org/xampp-files/8.2.12/xampp-windows-x64-8.2.12-0-VS16-installer.exe'; $output = '%TEMP_DOWNLOAD%\xampp-installer.exe'; Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -TimeoutSec 300; Write-Host '[✓] Descarga completada' } catch { Write-Host '[ERROR] No se pudo descargar XAMPP automáticamente'; Write-Host 'Error:' $_.Exception.Message; Write-Host ''; Write-Host 'OPCIÓN ALTERNATIVA:'; Write-Host '1. Ve a: https://www.apachefriends.org/download.html'; Write-Host '2. Descarga XAMPP manualmente'; Write-Host '3. Instálalo'; Write-Host '4. Ejecuta este instalador nuevamente'; exit 1 }"
     
     if %ERRORLEVEL% NEQ 0 (
         echo.
@@ -113,7 +114,8 @@ if %ERRORLEVEL% NEQ 0 (
     echo [!] Descargando instalador de Composer...
     
     REM Descargar Composer-Setup.exe
-    powershell -Command "try { $ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri 'https://getcomposer.org/Composer-Setup.exe' -OutFile '%TEMP_DOWNLOAD%\composer-setup.exe' -UseBasicParsing; Write-Host '[✓] Descarga completada' } catch { Write-Host '[ERROR] No se pudo descargar Composer'; Write-Host 'Descarga manualmente desde: https://getcomposer.org/download/'; exit 1 }"
+    echo        Intentando descargar Composer...
+    powershell -Command "$ErrorActionPreference = 'Stop'; try { $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $url = 'https://getcomposer.org/Composer-Setup.exe'; $output = '%TEMP_DOWNLOAD%\composer-setup.exe'; Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -TimeoutSec 300; Write-Host '[✓] Descarga completada' } catch { Write-Host '[ERROR] No se pudo descargar Composer automáticamente'; Write-Host 'Error:' $_.Exception.Message; Write-Host ''; Write-Host 'OPCIÓN ALTERNATIVA:'; Write-Host '1. Ve a: https://getcomposer.org/download/'; Write-Host '2. Descarga Composer-Setup.exe'; Write-Host '3. Instálalo'; Write-Host '4. Ejecuta este instalador nuevamente'; exit 1 }"
     
     if %ERRORLEVEL% NEQ 0 (
         echo.
@@ -132,9 +134,10 @@ if %ERRORLEVEL% NEQ 0 (
     echo   INSTALACIÓN DE COMPOSER
     echo ============================================
     echo.
-    echo Se abrirá el instalador de Composer.
+    echo ⚠️  Se abrirá el instalador de Composer.
     echo.
-    echo IMPORTANTE: Durante la instalación:
+    echo IMPORTANTE:
+    echo - Si aparece un aviso de permisos, acepta "Sí"
     echo - Selecciona "Add to PATH" si aparece la opción
     echo - Completa toda la instalación
     echo.
