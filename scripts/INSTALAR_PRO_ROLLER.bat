@@ -38,10 +38,25 @@ if %ERRORLEVEL% NEQ 0 (
     echo     Esto puede tardar varios minutos...
     echo.
     
-    REM Descargar XAMPP (versión más reciente)
-    REM Usar URL directa de ApacheFriends (más confiable que SourceForge)
-    echo        Intentando descargar desde ApacheFriends...
-    powershell -Command "$ErrorActionPreference = 'Stop'; try { $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $url = 'https://www.apachefriends.org/xampp-files/8.2.12/xampp-windows-x64-8.2.12-0-VS16-installer.exe'; $output = '%TEMP_DOWNLOAD%\xampp-installer.exe'; Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -TimeoutSec 300; Write-Host '[✓] Descarga completada' } catch { Write-Host '[ERROR] No se pudo descargar XAMPP automáticamente'; Write-Host 'Error:' $_.Exception.Message; Write-Host ''; Write-Host 'OPCIÓN ALTERNATIVA:'; Write-Host '1. Ve a: https://www.apachefriends.org/download.html'; Write-Host '2. Descarga XAMPP manualmente'; Write-Host '3. Instálalo'; Write-Host '4. Ejecuta este instalador nuevamente'; exit 1 }"
+    REM Descargar XAMPP desde SourceForge (repositorio oficial)
+    REM Verificar primero que la URL sea accesible, luego descargar
+    echo        Verificando disponibilidad de XAMPP...
+    powershell -Command "$ErrorActionPreference = 'Stop'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { $testUrl = 'https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/8.2.12/xampp-windows-x64-8.2.12-0-VS16-installer.exe'; $response = Invoke-WebRequest -Uri $testUrl -Method Head -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop; if ($response.StatusCode -ne 200) { throw 'URL no disponible' }; Write-Host '[✓] URL verificada, iniciando descarga...' } catch { Write-Host '[ERROR] No se puede acceder a la URL de XAMPP'; Write-Host 'Esto puede ser porque:'; Write-Host '- La versión específica ya no está disponible'; Write-Host '- Problemas de conexión'; Write-Host ''; Write-Host 'SOLUCIÓN: Descarga XAMPP manualmente desde:'; Write-Host 'https://www.apachefriends.org/download.html'; exit 1 }"
+    
+    if %ERRORLEVEL% NEQ 0 (
+        echo.
+        echo [!] No se pudo verificar la URL de XAMPP.
+        echo.
+        echo Por favor descarga XAMPP manualmente desde:
+        echo https://www.apachefriends.org/download.html
+        echo.
+        echo Después de instalarlo, ejecuta este instalador nuevamente.
+        pause
+        exit /b 1
+    )
+    
+    echo        Descargando XAMPP (esto puede tardar varios minutos)...
+    powershell -Command "$ErrorActionPreference = 'Stop'; try { $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $url = 'https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/8.2.12/xampp-windows-x64-8.2.12-0-VS16-installer.exe/download'; $output = '%TEMP_DOWNLOAD%\xampp-installer.exe'; Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -TimeoutSec 600 -UserAgent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'; Write-Host '[✓] Descarga completada' } catch { Write-Host '[ERROR] Error durante la descarga de XAMPP'; Write-Host 'Error:' $_.Exception.Message; Write-Host ''; Write-Host 'Descarga manualmente desde: https://www.apachefriends.org/download.html'; exit 1 }"
     
     if %ERRORLEVEL% NEQ 0 (
         echo.
