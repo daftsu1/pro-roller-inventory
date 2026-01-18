@@ -10,8 +10,9 @@ echo Directorio actual: %CD%
 echo.
 
 REM Cambiar al directorio padre si estamos en scripts/
-if exist "..\composer.json" (
-    cd ..
+set "SCRIPT_DIR=%~dp0"
+if exist "%SCRIPT_DIR%..\composer.json" (
+    cd /d "%SCRIPT_DIR%.."
     echo Cambiando al directorio raiz del proyecto...
     echo Nuevo directorio: %CD%
     echo.
