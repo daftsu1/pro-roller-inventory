@@ -98,10 +98,13 @@ if !MYSQL_OK! EQU 0 (
 echo.
 echo [4/8] Instalando dependencias de Composer...
 echo        Esto puede tardar varios minutos...
-call composer install --no-interaction --prefer-dist --optimize-autoloader
+call composer install --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-reqs
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [ERROR] Error al instalar dependencias.
+    echo        Si el error menciona Git, puedes instalarlo desde: https://git-scm.com
+    echo        O continuar manualmente ejecutando: composer install
+    echo.
     pause
     exit /b 1
 )
