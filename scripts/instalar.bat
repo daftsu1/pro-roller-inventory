@@ -1,14 +1,22 @@
 @echo off
-chcp 65001 >nul
+chcp 65001 >nul 2>&1
+cls
 echo ============================================
 echo   INSTALADOR - pro roller
 echo ============================================
 echo.
+echo Directorio actual: %CD%
+echo.
+pause
 
 REM Verificar que estamos en el directorio correcto
 if not exist "composer.json" (
+    echo.
     echo [ERROR] Este script debe ejecutarse desde la raíz del proyecto.
     echo        Asegúrate de estar en la carpeta donde está composer.json
+    echo.
+    echo        Directorio actual: %CD%
+    echo.
     pause
     exit /b 1
 )
