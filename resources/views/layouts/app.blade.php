@@ -14,7 +14,8 @@
     <style>
         .sidebar {
             width: 220px;
-            min-height: 100vh;
+            height: 100vh;
+            max-height: 100vh;
             background: #343a40;
             position: fixed;
             top: 0;
@@ -23,6 +24,7 @@
             transition: transform 0.3s ease;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
         .sidebar-content {
             flex: 1;
@@ -30,6 +32,7 @@
             overflow-x: hidden;
             padding: 1rem;
             padding-bottom: 0.5rem;
+            min-height: 0;
         }
         .sidebar .nav-link {
             color: rgba(255,255,255,0.8);
