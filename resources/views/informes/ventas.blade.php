@@ -55,7 +55,7 @@
         <div class="card">
             <div class="card-body">
                 <h6 class="text-muted mb-1">Ingresos Totales</h6>
-                <h3 class="mb-0 text-success">${{ number_format($totalVentas, 2) }}</h3>
+                <h3 class="mb-0 text-success">${{ number_format($totalVentas, 0, ',', '.') }}</h3>
             </div>
         </div>
     </div>
@@ -63,7 +63,7 @@
         <div class="card">
             <div class="card-body">
                 <h6 class="text-muted mb-1">Promedio por Venta</h6>
-                <h3 class="mb-0">${{ number_format($promedioVenta, 2) }}</h3>
+                <h3 class="mb-0">${{ number_format($promedioVenta, 0, ',', '.') }}</h3>
             </div>
         </div>
     </div>
@@ -101,7 +101,7 @@
                         <td>{{ $venta->numero_factura ?? '-' }}</td>
                         <td>{{ $venta->cliente ? $venta->cliente->nombre : ($venta->cliente_nombre ?? 'Cliente Ocasional') }}</td>
                         <td>{{ $venta->usuario->nombre }}</td>
-                        <td class="text-end"><strong>${{ number_format($venta->total, 2) }}</strong></td>
+                        <td class="text-end"><strong>${{ number_format($venta->total, 0, ',', '.') }}</strong></td>
                     </tr>
                     @empty
                     <tr>
@@ -116,7 +116,7 @@
                 <tfoot>
                     <tr class="table-active">
                         <th colspan="4" class="text-end">Total:</th>
-                        <th class="text-end">${{ number_format($totalVentas, 2) }}</th>
+                        <th class="text-end">${{ number_format($totalVentas, 0, ',', '.') }}</th>
                     </tr>
                 </tfoot>
                 @endif

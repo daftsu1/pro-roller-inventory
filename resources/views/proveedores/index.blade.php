@@ -60,9 +60,9 @@
                         <td>{{ $proveedor->created_at->format('d/m/Y') }}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="{{ route('proveedores.show', $proveedor) }}" class="btn btn-outline-info">
+                                <button type="button" class="btn btn-outline-info" onclick="abrirVerProveedor({{ $proveedor->id }})">
                                     <i class="bi bi-eye"></i> Ver
-                                </a>
+                                </button>
                                 <button type="button" class="btn btn-outline-primary" onclick="abrirEditarProveedor({{ $proveedor->id }})">
                                     <i class="bi bi-pencil"></i> Editar
                                 </button>
@@ -140,6 +140,28 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Ver Detalles del Proveedor -->
+<div class="modal fade" id="verProveedorModal" tabindex="-1" aria-labelledby="verProveedorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="verProveedorModalLabel">Detalle Proveedor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="verProveedorContent">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
         </div>
     </div>
 </div>
@@ -267,6 +289,117 @@ function limpiarErrores() {
     });
     document.querySelectorAll('#proveedorForm .invalid-feedback').forEach(el => {
         el.textContent = '';
+    });
+}
+
+// Abrir modal para ver detalles del proveedor
+function abrirVerProveedor(proveedorId) {
+    const verProveedorModal = new bootstrap.Modal(document.getElementById('verProveedorModal'));
+    const content = document.getElementById('verProveedorContent');
+    
+    // Mostrar loading
+    content.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></div>';
+    verProveedorModal.show();
+    
+    fetch(`/proveedores/${proveedorId}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                throw new Error(`HTTP error! status: ${response.status} - ${text}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Datos recibidos:', data); // Debug
+        if (data.success && data.proveedor) {
+            const p = data.proveedor;
+            const productos = p.productos || [];
+            
+            let productosHtml = '';
+            if (productos.length > 0) {
+                productosHtml = `
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">Productos (${productos.length})</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                <table class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Nombre</th>
+                                            <th>Precio Venta</th>
+                                            <th>Stock</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${productos.map(producto => `
+                                            <tr>
+                                                <td>${producto.codigo || '-'}</td>
+                                                <td>${producto.nombre || '-'}</td>
+                                                <td>$${parseFloat(producto.precio_venta || 0).toLocaleString('es-CL')}</td>
+                                                <td>${producto.stock_actual || 0}</td>
+                                                <td>${producto.activo ? '<span class="badge bg-success">Activo</span>' : '<span class="badge bg-secondary">Inactivo</span>'}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                productosHtml = '<div class="alert alert-info mt-3 mb-0"><i class="bi bi-info-circle"></i> Este proveedor no tiene productos asociados.</div>';
+            }
+            
+            content.innerHTML = `
+                <div class="row">
+                    <div class="col-12">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="30%">Nombre:</th>
+                                <td>${p.nombre || '-'}</td>
+                            </tr>
+                            <tr>
+                                <th>Contacto:</th>
+                                <td>${p.contacto || '-'}</td>
+                            </tr>
+                            <tr>
+                                <th>Teléfono:</th>
+                                <td>${p.telefono || '-'}</td>
+                            </tr>
+                            <tr>
+                                <th>Email:</th>
+                                <td>${p.email ? `<a href="mailto:${p.email}">${p.email}</a>` : '-'}</td>
+                            </tr>
+                            <tr>
+                                <th>Total Productos:</th>
+                                <td><span class="badge bg-info">${productos.length}</span></td>
+                            </tr>
+                            <tr>
+                                <th>Fecha Creación:</th>
+                                <td>${p.created_at ? new Date(p.created_at).toLocaleDateString('es-CL', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-'}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                ${productosHtml}
+            `;
+        } else {
+            content.innerHTML = '<div class="alert alert-danger">Error al cargar los detalles del proveedor.</div>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        content.innerHTML = `<div class="alert alert-danger">Error al cargar los detalles del proveedor.<br><small>${error.message}</small></div>`;
     });
 }
 </script>

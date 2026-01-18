@@ -76,12 +76,12 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-2">
                     <span>Subtotal:</span>
-                    <span>${{ number_format($venta->total, 2) }}</span>
+                    <span>${{ number_format($venta->total, 0, ',', '.') }}</span>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between">
                     <strong>Total:</strong>
-                    <strong class="fs-4 text-success">${{ number_format($venta->total, 2) }}</strong>
+                    <strong class="fs-4 text-success">${{ number_format($venta->total, 0, ',', '.') }}</strong>
                 </div>
             </div>
         </div>
@@ -109,15 +109,15 @@
                     <tr>
                         <td>{{ $detalle->producto->nombre }}</td>
                         <td>{{ $detalle->cantidad }}</td>
-                        <td>${{ number_format($detalle->precio_unitario, 2) }}</td>
-                        <td>${{ number_format($detalle->subtotal, 2) }}</td>
+                        <td>${{ number_format($detalle->precio_unitario, 0, ',', '.') }}</td>
+                        <td>${{ number_format($detalle->subtotal, 0, ',', '.') }}</td>
                     </tr>
                     @endforeach
                 </tbody>
                 <tfoot>
                     <tr>
                         <th colspan="3" class="text-end">Total:</th>
-                        <th>${{ number_format($venta->total, 2) }}</th>
+                        <th>${{ number_format($venta->total, 0, ',', '.') }}</th>
                     </tr>
                 </tfoot>
             </table>

@@ -58,7 +58,7 @@
         <div class="card">
             <div class="card-body">
                 <h6 class="text-muted mb-1">Ingresos Totales</h6>
-                <h3 class="mb-0 text-success">${{ number_format($resumenVentas->total_ingresos ?? 0, 2) }}</h3>
+                <h3 class="mb-0 text-success">${{ number_format($resumenVentas->total_ingresos ?? 0, 0, ',', '.') }}</h3>
             </div>
         </div>
     </div>
@@ -66,7 +66,7 @@
         <div class="card">
             <div class="card-body">
                 <h6 class="text-muted mb-1">Promedio por Venta</h6>
-                <h3 class="mb-0">${{ number_format($resumenVentas->promedio_venta ?? 0, 2) }}</h3>
+                <h3 class="mb-0">${{ number_format($resumenVentas->promedio_venta ?? 0, 0, ',', '.') }}</h3>
             </div>
         </div>
     </div>
@@ -74,7 +74,7 @@
         <div class="card">
             <div class="card-body">
                 <h6 class="text-muted mb-1">Venta Máxima</h6>
-                <h3 class="mb-0 text-primary">${{ number_format($resumenVentas->venta_maxima ?? 0, 2) }}</h3>
+                <h3 class="mb-0 text-primary">${{ number_format($resumenVentas->venta_maxima ?? 0, 0, ',', '.') }}</h3>
             </div>
         </div>
     </div>

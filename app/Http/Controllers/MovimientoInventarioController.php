@@ -45,7 +45,11 @@ class MovimientoInventarioController extends Controller
         }
 
         $movimientos = $query->latest('fecha')->latest('id')->paginate(20);
-        $productos = Producto::orderBy('nombre')->get();
+        // Productos activos para el buscador (solo campos necesarios)
+        $productos = Producto::where('activo', true)
+            ->select('id', 'codigo', 'nombre', 'stock_actual')
+            ->orderBy('nombre')
+            ->get();
 
         return view('movimientos.index', compact('movimientos', 'productos'));
     }
@@ -67,11 +71,18 @@ class MovimientoInventarioController extends Controller
             'referencia' => 'nullable|string|max:255',
         ]);
 
-        return DB::transaction(function () use ($validated) {
+        return DB::transaction(function () use ($validated, $request) {
             $producto = Producto::findOrFail($validated['producto_id']);
 
             // Validar stock si es salida
             if ($validated['tipo'] === 'salida' && $producto->stock_actual < $validated['cantidad']) {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Stock insuficiente. Stock actual: ' . $producto->stock_actual,
+                        'errors' => ['cantidad' => ['Stock insuficiente. Stock actual: ' . $producto->stock_actual]]
+                    ], 422);
+                }
                 return redirect()->back()
                     ->withInput()
                     ->with('error', 'Stock insuficiente. Stock actual: ' . $producto->stock_actual);
@@ -95,6 +106,14 @@ class MovimientoInventarioController extends Controller
                 $producto->decrement('stock_actual', $validated['cantidad']);
             }
 
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Movimiento registrado exitosamente.',
+                    'movimiento' => $movimiento->load('producto', 'usuario')
+                ]);
+            }
+
             return redirect()->route('movimientos.index')
                 ->with('success', 'Movimiento registrado exitosamente.');
         });
@@ -103,6 +122,32 @@ class MovimientoInventarioController extends Controller
     public function show(MovimientoInventario $movimiento)
     {
         $movimiento->load('producto', 'usuario', 'venta', 'detalleVenta');
+        
+        if (request()->expectsJson() || request()->ajax() || request()->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'movimiento' => [
+                    'id' => $movimiento->id,
+                    'fecha' => $movimiento->fecha->format('d/m/Y'),
+                    'tipo' => $movimiento->tipo,
+                    'cantidad' => $movimiento->cantidad,
+                    'motivo' => $movimiento->motivo,
+                    'referencia' => $movimiento->referencia ?? '-',
+                    'usuario' => $movimiento->usuario->nombre ?? '-',
+                    'venta_id' => $movimiento->venta_id,
+                    'venta_numero_factura' => $movimiento->venta->numero_factura ?? null,
+                    'producto' => [
+                        'id' => $movimiento->producto->id,
+                        'codigo' => $movimiento->producto->codigo,
+                        'nombre' => $movimiento->producto->nombre,
+                        'stock_actual' => $movimiento->producto->stock_actual,
+                        'stock_minimo' => $movimiento->producto->stock_minimo,
+                        'tiene_stock_minimo' => $movimiento->producto->tieneStockMinimo()
+                    ]
+                ]
+            ]);
+        }
+        
         return view('movimientos.show', compact('movimiento'));
     }
 }

@@ -67,11 +67,11 @@
                 <table class="table table-borderless">
                     <tr>
                         <th width="40%">Precio Compra:</th>
-                        <td>${{ number_format($producto->precio_compra, 2) }}</td>
+                        <td>${{ number_format($producto->precio_compra, 0, ',', '.') }}</td>
                     </tr>
                     <tr>
                         <th>Precio Venta:</th>
-                        <td class="fw-bold text-success">${{ number_format($producto->precio_venta, 2) }}</td>
+                        <td class="fw-bold text-success">${{ number_format($producto->precio_venta, 0, ',', '.') }}</td>
                     </tr>
                     <tr>
                         <th>Stock Actual:</th>

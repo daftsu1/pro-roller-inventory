@@ -71,7 +71,7 @@
                         <td>{{ $producto->codigo }}</td>
                         <td>{{ $producto->nombre }}</td>
                         <td>{{ $producto->categoria->nombre ?? '-' }}</td>
-                        <td>${{ number_format($producto->precio_venta, 2) }}</td>
+                        <td>${{ number_format($producto->precio_venta, 0, ',', '.') }}</td>
                         <td>
                             @if($producto->tieneStockMinimo())
                                 <span class="badge bg-warning">{{ $producto->stock_actual }}</span>
@@ -114,9 +114,11 @@
         </div>
         
         <!-- Paginación -->
-        <div class="mt-3">
-            {{ $productos->links() }}
+        @if($productos->hasPages())
+        <div class="mt-3 d-flex justify-content-center">
+            {{ $productos->links('pagination::bootstrap-5') }}
         </div>
+        @endif
     </div>
 </div>
 @endsection

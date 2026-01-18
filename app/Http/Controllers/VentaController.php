@@ -107,6 +107,8 @@ class VentaController extends Controller
         $validated = $request->validate([
             'producto_id' => 'required|exists:productos,id',
             'cantidad' => 'required|integer|min:1',
+            'descuento_porcentaje' => 'nullable|numeric|min:0|max:100',
+            'descuento_monto' => 'nullable|numeric|min:0',
         ]);
 
         try {
@@ -138,24 +140,50 @@ class VentaController extends Controller
                 ], 400);
             }
             
+            // Calcular descuentos
+            $descuentoPorcentaje = $validated['descuento_porcentaje'] ?? 0;
+            $descuentoMonto = $validated['descuento_monto'] ?? 0;
+
             if ($detalleExistente) {
                 // Actualizar cantidad
                 $detalleExistente->increment('cantidad', $validated['cantidad']);
+                
+                // Recalcular subtotal con descuentos
+                $subtotal = Venta::calcularSubtotalConDescuento(
+                    $detalleExistente->cantidad,
+                    $producto->precio_venta,
+                    $descuentoPorcentaje,
+                    $descuentoMonto
+                );
+                
                 $detalleExistente->update([
-                    'subtotal' => $detalleExistente->cantidad * $producto->precio_venta
+                    'descuento_porcentaje' => $descuentoPorcentaje,
+                    'descuento_monto' => $descuentoMonto,
+                    'subtotal' => $subtotal
                 ]);
             } else {
+                // Calcular subtotal con descuentos
+                $subtotal = Venta::calcularSubtotalConDescuento(
+                    $validated['cantidad'],
+                    $producto->precio_venta,
+                    $descuentoPorcentaje,
+                    $descuentoMonto
+                );
+                
                 // Crear nuevo detalle
                 $venta->detalles()->create([
                     'producto_id' => $producto->id,
                     'cantidad' => $validated['cantidad'],
                     'precio_unitario' => $producto->precio_venta,
-                    'subtotal' => $validated['cantidad'] * $producto->precio_venta,
+                    'descuento_porcentaje' => $descuentoPorcentaje,
+                    'descuento_monto' => $descuentoMonto,
+                    'subtotal' => $subtotal,
                 ]);
             }
 
-            // Recalcular total
-            $total = $venta->fresh()->detalles->sum('subtotal');
+            // Recalcular total considerando descuentos por producto y descuento sobre el total
+            $venta = $venta->fresh();
+            $total = $venta->calcularTotalConDescuentos();
             $venta->update(['total' => $total]);
 
             return response()->json([
@@ -195,8 +223,9 @@ class VentaController extends Controller
             $detalle = $venta->detalles()->findOrFail($detalleId);
             $detalle->delete();
 
-            // Recalcular total
-            $total = $venta->fresh()->detalles->sum('subtotal');
+            // Recalcular total considerando descuentos
+            $venta = $venta->fresh();
+            $total = $venta->calcularTotalConDescuentos();
             $venta->update(['total' => $total]);
 
             return response()->json([
@@ -219,6 +248,8 @@ class VentaController extends Controller
             'cliente_id' => 'nullable|exists:clientes,id',
             'cliente_nombre' => 'nullable|string|max:255',
             'cliente_documento' => 'nullable|string|max:50',
+            'descuento_porcentaje' => 'nullable|numeric|min:0|max:100',
+            'descuento_monto' => 'nullable|numeric|min:0',
         ]);
 
         // Si hay cliente_id, usarlo y mantener compatibilidad con campos manuales
@@ -233,12 +264,74 @@ class VentaController extends Controller
             $updateData['cliente_id'] = $validated['cliente_id'];
         }
 
+        // Agregar descuentos sobre el total si se proporcionan
+        if (isset($validated['descuento_porcentaje'])) {
+            $updateData['descuento_porcentaje'] = $validated['descuento_porcentaje'];
+        }
+        if (isset($validated['descuento_monto'])) {
+            $updateData['descuento_monto'] = $validated['descuento_monto'];
+        }
+
         $venta->update($updateData);
+
+        // Recalcular total con los nuevos descuentos
+        $total = $venta->fresh()->calcularTotalConDescuentos();
+        $venta->update(['total' => $total]);
 
         return response()->json([
             'success' => true,
-            'venta' => $venta->fresh()
+            'venta' => $venta->fresh(),
+            'total' => number_format($venta->total, 2)
         ]);
+    }
+
+    /**
+     * Actualizar descuento de un producto específico en la venta
+     */
+    public function actualizarDescuentoProducto(Request $request, Venta $venta)
+    {
+        $validated = $request->validate([
+            'detalle_id' => 'required|exists:detalle_ventas,id',
+            'descuento_porcentaje' => 'nullable|numeric|min:0|max:100',
+            'descuento_monto' => 'nullable|numeric|min:0',
+        ]);
+
+        try {
+            $detalle = $venta->detalles()->findOrFail($validated['detalle_id']);
+            
+            $descuentoPorcentaje = $validated['descuento_porcentaje'] ?? $detalle->descuento_porcentaje ?? 0;
+            $descuentoMonto = $validated['descuento_monto'] ?? $detalle->descuento_monto ?? 0;
+            
+            // Recalcular subtotal con descuentos
+            $subtotal = Venta::calcularSubtotalConDescuento(
+                $detalle->cantidad,
+                $detalle->precio_unitario,
+                $descuentoPorcentaje,
+                $descuentoMonto
+            );
+            
+            $detalle->update([
+                'descuento_porcentaje' => $descuentoPorcentaje,
+                'descuento_monto' => $descuentoMonto,
+                'subtotal' => $subtotal
+            ]);
+
+            // Recalcular total de la venta
+            $venta = $venta->fresh();
+            $total = $venta->calcularTotalConDescuentos();
+            $venta->update(['total' => $total]);
+
+            return response()->json([
+                'success' => true,
+                'venta' => $venta->load('detalles.producto'),
+                'total' => number_format($venta->total, 2)
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
+        }
     }
 
     public function cerrarVenta(Venta $venta)

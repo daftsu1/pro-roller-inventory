@@ -44,6 +44,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('ventas/{venta}/agregar-producto', [VentaController::class, 'agregarProducto'])->name('ventas.agregar-producto');
     Route::delete('ventas/{venta}/eliminar-producto', [VentaController::class, 'eliminarProducto'])->name('ventas.eliminar-producto');
     Route::put('ventas/{venta}/actualizar', [VentaController::class, 'actualizarVenta'])->name('ventas.actualizar');
+    Route::put('ventas/{venta}/actualizar-descuento-producto', [VentaController::class, 'actualizarDescuentoProducto'])->name('ventas.actualizar-descuento-producto');
     Route::post('ventas/{venta}/cerrar', [VentaController::class, 'cerrarVenta'])->name('ventas.cerrar');
     Route::get('ventas-filtrar', [VentaController::class, 'filtrar'])->name('ventas.filtrar');
     

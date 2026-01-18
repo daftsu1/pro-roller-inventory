@@ -118,12 +118,17 @@
                     
                     <div class="col-md-8">
                         <label for="cliente_buscar_modal" class="form-label">Buscar Cliente <small class="text-muted">(Opcional - puede dejar en blanco)</small></label>
-                        <div class="position-relative">
-                            <input type="text" class="form-control" 
-                                   id="cliente_buscar_modal" 
-                                   placeholder="Buscar cliente por nombre, documento o teléfono... (opcional)">
-                            <input type="hidden" id="cliente_id_modal" value="">
-                            <ul class="list-group position-absolute w-100" id="clientes_lista" style="display:none; z-index:1000; max-height:200px; overflow-y:auto;"></ul>
+                        <div class="d-flex gap-2">
+                            <div class="position-relative flex-grow-1">
+                                <input type="text" class="form-control" 
+                                       id="cliente_buscar_modal" 
+                                       placeholder="Buscar cliente por nombre, documento o teléfono... (opcional)">
+                                <input type="hidden" id="cliente_id_modal" value="">
+                                <ul class="list-group position-absolute w-100" id="clientes_lista" style="display:none; z-index:1000; max-height:200px; overflow-y:auto;"></ul>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary" id="btnNuevoCliente" onclick="abrirModalNuevoCliente()" title="Crear nuevo cliente">
+                                <i class="bi bi-person-plus"></i> Nuevo
+                            </button>
                         </div>
                         <small class="text-muted">Deje en blanco para venta sin cliente</small>
                     </div>
@@ -138,10 +143,10 @@
                     </div>
                     
                     <div class="col-md-6">
-                        <label for="cliente_documento_modal" class="form-label">Documento</label>
+                        <label for="cliente_documento_modal" class="form-label">RUT<small class="text-muted">(Opcional)</small></label>
                         <input type="text" class="form-control" 
                                id="cliente_documento_modal" 
-                               placeholder="Documento (se llena automáticamente si busca cliente)">
+                               placeholder="RUT, DNI, CI o documento de identidad">
                     </div>
                 </div>
                 
@@ -172,12 +177,20 @@
                                     <input type="hidden" id="producto_id_seleccionado" value="">
                                     <small class="text-muted" id="producto_info" style="display:none;"></small>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <label for="cantidad_producto" class="form-label">Cantidad *</label>
                                     <input type="number" class="form-control" id="cantidad_producto" min="1" value="1">
                                     <small class="text-muted" id="stock_disponible"></small>
                                 </div>
-                                <div class="col-md-3 d-flex align-items-end">
+                                <div class="col-md-2">
+                                    <label for="descuento_porcentaje_producto" class="form-label">Descuento %</label>
+                                    <input type="number" class="form-control" id="descuento_porcentaje_producto" min="0" max="100" value="0" step="0.01" placeholder="0">
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="descuento_monto_producto" class="form-label">Descuento $</label>
+                                    <input type="number" class="form-control" id="descuento_monto_producto" min="0" value="0" step="0.01" placeholder="0.00">
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
                                     <button type="button" class="btn btn-primary me-2" onclick="confirmarProducto()">
                                         <i class="bi bi-check-circle"></i> Agregar
                                     </button>
@@ -192,8 +205,25 @@
                             <p class="text-muted mb-0">No hay productos agregados</p>
                         </div>
                         
-                        <div class="d-flex justify-content-end mt-3">
-                            <h5>Total: $<span id="totalVenta">0.00</span></h5>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <button class="btn btn-link p-0 text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#descuentosCollapse" aria-expanded="false" aria-controls="descuentosCollapse" id="btnToggleDescuentos">
+                                    <i class="bi bi-chevron-down" id="iconDescuentos"></i> <small class="text-muted">Descuento sobre el total (opcional)</small>
+                                </button>
+                                <div class="collapse mt-2" id="descuentosCollapse">
+                                    <div class="mb-2">
+                                        <label for="descuento_porcentaje_venta" class="form-label small">Descuento (%)</label>
+                                        <input type="number" class="form-control form-control-sm" id="descuento_porcentaje_venta" min="0" max="100" value="0" step="0.01" placeholder="0" onchange="actualizarDescuentoVenta()" onblur="actualizarDescuentoVenta()">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="descuento_monto_venta" class="form-label small">Descuento ($)</label>
+                                        <input type="number" class="form-control form-control-sm" id="descuento_monto_venta" min="0" value="0" step="0.01" placeholder="0.00" onchange="actualizarDescuentoVenta()" onblur="actualizarDescuentoVenta()">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 d-flex justify-content-end align-items-end">
+                                <h5>Total: $<span id="totalVenta">0</span></h5>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -213,6 +243,44 @@
                 </button>
                 <button type="button" id="btnImprimirVenta" class="btn btn-primary" style="display:none;" onclick="imprimirVenta()">
                     <i class="bi bi-printer"></i> Imprimir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para crear cliente rápido -->
+<div class="modal fade" id="nuevoClienteModal" tabindex="-1" aria-labelledby="nuevoClienteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="nuevoClienteModalLabel">Nuevo Cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formNuevoCliente">
+                    <div class="mb-3">
+                        <label for="nombre_nuevo_cliente" class="form-label">Nombre Completo *</label>
+                        <input type="text" class="form-control" id="nombre_nuevo_cliente" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="documento_nuevo_cliente" class="form-label">Documento (RUT/DNI/CI) <small class="text-muted">(Opcional)</small></label>
+                        <input type="text" class="form-control" id="documento_nuevo_cliente" placeholder="RUT, DNI, CI o documento de identidad">
+                    </div>
+                    <div class="mb-3">
+                        <label for="telefono_nuevo_cliente" class="form-label">Teléfono</label>
+                        <input type="text" class="form-control" id="telefono_nuevo_cliente">
+                    </div>
+                    <div class="mb-3">
+                        <label for="email_nuevo_cliente" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email_nuevo_cliente">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarNuevoCliente()">
+                    <i class="bi bi-check-circle"></i> Crear Cliente
                 </button>
             </div>
         </div>
@@ -279,6 +347,13 @@
 <script>
 let ventaActual = null;
 let ventaModal = null;
+
+// Función helper para formatear precios en CLP
+function formatearCLP(valor) {
+    const num = typeof valor === 'string' ? parseFloat(valor.replace(/[^\d,.-]/g, '').replace(',', '.')) : parseFloat(valor);
+    if (isNaN(num)) return '0';
+    return num.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     ventaModal = new bootstrap.Modal(document.getElementById('ventaModal'));
@@ -366,6 +441,11 @@ document.addEventListener('DOMContentLoaded', function() {
         clientesLista.style.display = 'none';
         document.getElementById('cliente_nombre_modal').value = nombre;
         document.getElementById('cliente_documento_modal').value = documento || '';
+        
+        // Guardar datos de la venta si hay una venta activa
+        if (ventaActual) {
+            guardarDatosVenta();
+        }
         // Guardar automáticamente
         if (ventaActual) {
             guardarDatosVenta();
@@ -424,7 +504,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div>
                                 <strong>${producto.nombre}</strong>
                                 <br>
-                                <small class="text-muted">Código: ${producto.codigo} | Stock: ${producto.stock_actual} | Precio: $${parseFloat(producto.precio_venta).toFixed(2)}</small>
+                                <small class="text-muted">Código: ${producto.codigo} | Stock: ${producto.stock_actual} | Precio: $${parseFloat(producto.precio_venta).toLocaleString('es-CL')}</small>
                             </div>
                         </div>
                     </button>
@@ -460,7 +540,7 @@ document.addEventListener('DOMContentLoaded', function() {
         productoInfo.innerHTML = `
             <strong>${nombre}</strong> | 
             Stock disponible: <span class="badge bg-info">${stock}</span> | 
-            Precio: <span class="badge bg-success">$${parseFloat(precio).toFixed(2)}</span>
+            Precio: <span class="badge bg-success">$${parseFloat(precio).toLocaleString('es-CL')}</span>
         `;
         productoInfo.style.display = 'block';
         
@@ -474,6 +554,29 @@ document.addEventListener('DOMContentLoaded', function() {
         ventaActual = null;
         aplicarFiltros(); // Recargar tabla de ventas
     });
+    
+    // Cambiar icono del botón de descuentos cuando se expande/contrae
+    const descuentosCollapse = document.getElementById('descuentosCollapse');
+    const iconDescuentos = document.getElementById('iconDescuentos');
+    if (descuentosCollapse && iconDescuentos) {
+        descuentosCollapse.addEventListener('show.bs.collapse', function () {
+            iconDescuentos.classList.remove('bi-chevron-down');
+            iconDescuentos.classList.add('bi-chevron-up');
+        });
+        descuentosCollapse.addEventListener('hide.bs.collapse', function () {
+            iconDescuentos.classList.remove('bi-chevron-up');
+            iconDescuentos.classList.add('bi-chevron-down');
+        });
+    }
+    
+    // Permitir crear cliente con Enter en el formulario de nuevo cliente
+    const formNuevoCliente = document.getElementById('formNuevoCliente');
+    if (formNuevoCliente) {
+        formNuevoCliente.addEventListener('submit', function(e) {
+            e.preventDefault();
+            guardarNuevoCliente();
+        });
+    }
 });
 
 // Abrir venta existente en el modal
@@ -516,6 +619,12 @@ function abrirVenta(ventaId) {
         document.getElementById('cliente_buscar_modal').disabled = !esPendiente;
         document.getElementById('cliente_nombre_modal').disabled = !esPendiente;
         document.getElementById('cliente_documento_modal').disabled = !esPendiente;
+        
+        // Deshabilitar botón "Nuevo Cliente" si la venta no está pendiente
+        const btnNuevoCliente = document.getElementById('btnNuevoCliente');
+        if (btnNuevoCliente) {
+            btnNuevoCliente.disabled = !esPendiente;
+        }
         
         // Mostrar/ocultar botones
         const esCompletada = ventaActual.estado === 'completada';
@@ -619,6 +728,8 @@ function toggleFilaAgregar() {
 // Cancelar agregar producto
 function cancelarAgregarProducto() {
     document.getElementById('producto_buscar').value = '';
+    document.getElementById('descuento_porcentaje_producto').value = '0';
+    document.getElementById('descuento_monto_producto').value = '0';
     document.getElementById('producto_id_seleccionado').value = '';
     document.getElementById('producto_info').style.display = 'none';
     document.getElementById('productos_lista').style.display = 'none';
@@ -647,9 +758,18 @@ function confirmarProducto() {
         return;
     }
     
+    const descuentoPorcentaje = parseFloat(document.getElementById('descuento_porcentaje_producto').value) || 0;
+    const descuentoMonto = parseFloat(document.getElementById('descuento_monto_producto').value) || 0;
+    
     const formData = new FormData();
     formData.append('producto_id', productoId);
     formData.append('cantidad', cantidad);
+    if (descuentoPorcentaje > 0) {
+        formData.append('descuento_porcentaje', descuentoPorcentaje);
+    }
+    if (descuentoMonto > 0) {
+        formData.append('descuento_monto', descuentoMonto);
+    }
     
     fetch(`/ventas/${ventaActual.id}/agregar-producto`, {
         method: 'POST',
@@ -729,7 +849,7 @@ function actualizarTablaProductosDesdeVenta(venta) {
     
     if (!venta.detalles || venta.detalles.length === 0) {
         container.innerHTML = '<p class="text-muted mb-0">No hay productos agregados</p>';
-        document.getElementById('totalVenta').textContent = '0.00';
+        document.getElementById('totalVenta').textContent = '0';
         return;
     }
     
@@ -741,6 +861,7 @@ function actualizarTablaProductosDesdeVenta(venta) {
                         <th>Producto</th>
                         <th>Cantidad</th>
                         <th>Precio Unit.</th>
+                        <th>Descuento</th>
                         <th>Subtotal</th>
                         ${esPendiente ? '<th></th>' : ''}
                     </tr>
@@ -749,12 +870,25 @@ function actualizarTablaProductosDesdeVenta(venta) {
     `;
     
     venta.detalles.forEach((detalle) => {
+        const descuentoPorcentaje = parseFloat(detalle.descuento_porcentaje) || 0;
+        const descuentoMonto = parseFloat(detalle.descuento_monto) || 0;
+        let descuentoTexto = '';
+        if (descuentoPorcentaje > 0) {
+            descuentoTexto = `${descuentoPorcentaje}%`;
+        }
+        if (descuentoMonto > 0) {
+            if (descuentoTexto) descuentoTexto += ' + ';
+            descuentoTexto += `$${descuentoMonto.toLocaleString('es-CL')}`;
+        }
+        if (!descuentoTexto) descuentoTexto = '-';
+        
         html += `
             <tr>
                 <td>${detalle.producto.nombre}</td>
                 <td>${detalle.cantidad}</td>
-                <td>$${parseFloat(detalle.precio_unitario).toFixed(2)}</td>
-                <td>$${parseFloat(detalle.subtotal).toFixed(2)}</td>
+                <td>$${parseFloat(detalle.precio_unitario).toLocaleString('es-CL')}</td>
+                <td><small class="text-muted">${descuentoTexto}</small></td>
+                <td>$${parseFloat(detalle.subtotal).toLocaleString('es-CL')}</td>
                 ${esPendiente ? `
                 <td>
                     <button type="button" class="btn btn-sm btn-danger" onclick="eliminarProducto(${detalle.id})">
@@ -773,7 +907,67 @@ function actualizarTablaProductosDesdeVenta(venta) {
     `;
     
     container.innerHTML = html;
-    document.getElementById('totalVenta').textContent = parseFloat(venta.total).toFixed(2);
+    
+    // Actualizar descuentos sobre el total si existen
+    if (venta.descuento_porcentaje) {
+        document.getElementById('descuento_porcentaje_venta').value = parseFloat(venta.descuento_porcentaje).toFixed(2);
+    }
+    if (venta.descuento_monto) {
+        document.getElementById('descuento_monto_venta').value = parseFloat(venta.descuento_monto).toFixed(2);
+    }
+    
+    // Expandir collapsible de descuentos si hay descuentos aplicados
+    const tieneDescuentos = (venta.descuento_porcentaje && parseFloat(venta.descuento_porcentaje) > 0) || 
+                            (venta.descuento_monto && parseFloat(venta.descuento_monto) > 0);
+    if (tieneDescuentos) {
+        const descuentosCollapse = document.getElementById('descuentosCollapse');
+        const bsCollapse = new bootstrap.Collapse(descuentosCollapse, { show: true });
+    }
+    
+    document.getElementById('totalVenta').textContent = parseFloat(venta.total).toLocaleString('es-CL');
+}
+
+// Actualizar descuento sobre el total de la venta
+function actualizarDescuentoVenta() {
+    if (!ventaActual) return;
+    
+    const descuentoPorcentaje = parseFloat(document.getElementById('descuento_porcentaje_venta').value) || 0;
+    const descuentoMonto = parseFloat(document.getElementById('descuento_monto_venta').value) || 0;
+    
+    const updateData = {
+        fecha: document.getElementById('fecha_modal').value,
+        cliente_id: document.getElementById('cliente_id_modal').value || null,
+        cliente_nombre: document.getElementById('cliente_nombre_modal').value || null,
+        cliente_documento: document.getElementById('cliente_documento_modal').value || null,
+        descuento_porcentaje: descuentoPorcentaje,
+        descuento_monto: descuentoMonto
+    };
+    
+    fetch(`/ventas/${ventaActual.id}/actualizar`, {
+        method: 'PUT',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(updateData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            ventaActual = data.venta;
+            // Formatear total con formato CLP chileno
+            const totalNum = typeof data.total === 'string' ? parseFloat(data.total.replace(/[^\d,.-]/g, '').replace(',', '.')) : parseFloat(data.total);
+            document.getElementById('totalVenta').textContent = totalNum.toLocaleString('es-CL');
+        } else {
+            alert('Error al actualizar el descuento: ' + (data.message || 'Error desconocido'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al actualizar el descuento');
+    });
 }
 
 // Completar venta desde el modal
@@ -804,6 +998,33 @@ function completarVenta() {
             document.getElementById('btnCompletarVenta').style.display = 'none';
             document.getElementById('btnCancelarVenta').style.display = 'inline-block';
             document.getElementById('btnImprimirVenta').style.display = 'inline-block';
+            
+            // Actualizar badge de pendientes (decrementar contador)
+            const badgePendientes = document.getElementById('badgePendientes');
+            if (badgePendientes) {
+                const contadorActual = parseInt(badgePendientes.textContent) || 0;
+                const nuevoContador = Math.max(0, contadorActual - 1);
+                if (nuevoContador > 0) {
+                    badgePendientes.textContent = nuevoContador;
+                } else {
+                    // Si no quedan pendientes, ocultar el badge
+                    badgePendientes.remove();
+                }
+            }
+            
+            // Cambiar filtro a "completada" para ver la venta que acabamos de completar
+            const estadoSelect = document.getElementById('estado_filtro');
+            if (estadoSelect && estadoSelect.value === 'pendiente') {
+                estadoSelect.value = 'completada';
+                // Actualizar tabs activos
+                document.querySelectorAll('#ventasTabs .nav-link').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                const completadasTab = document.getElementById('completadas-tab');
+                if (completadasTab) {
+                    completadasTab.classList.add('active');
+                }
+            }
             
             // Recargar tabla de ventas
             aplicarFiltros();
@@ -904,6 +1125,19 @@ function eliminarVentaDesdeModal() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            // Actualizar badge de pendientes si se eliminó una venta pendiente
+            if (ventaActual && ventaActual.estado === 'pendiente') {
+                const badgePendientes = document.getElementById('badgePendientes');
+                if (badgePendientes) {
+                    const contadorActual = parseInt(badgePendientes.textContent) || 0;
+                    const nuevoContador = Math.max(0, contadorActual - 1);
+                    if (nuevoContador > 0) {
+                        badgePendientes.textContent = nuevoContador;
+                    } else {
+                        badgePendientes.remove();
+                    }
+                }
+            }
             alert(data.message);
             ventaModal.hide();
             aplicarFiltros(); // Recargar tabla
@@ -980,6 +1214,90 @@ function eliminarVentaDesdeModal() {
 function imprimirVenta() {
     if (!ventaActual) return;
     window.open(`/ventas/${ventaActual.id}`, '_blank');
+}
+
+// Abrir modal para crear nuevo cliente
+function abrirModalNuevoCliente() {
+    // Limpiar formulario
+    document.getElementById('formNuevoCliente').reset();
+    // Abrir modal
+    const nuevoClienteModal = new bootstrap.Modal(document.getElementById('nuevoClienteModal'));
+    nuevoClienteModal.show();
+    // Enfocar en el campo nombre
+    setTimeout(() => {
+        document.getElementById('nombre_nuevo_cliente').focus();
+    }, 300);
+}
+
+// Guardar nuevo cliente desde el modal de venta
+function guardarNuevoCliente() {
+    const nombre = document.getElementById('nombre_nuevo_cliente').value.trim();
+    
+    if (!nombre) {
+        alert('El nombre del cliente es requerido');
+        document.getElementById('nombre_nuevo_cliente').focus();
+        return;
+    }
+    
+    const data = {
+        nombre: nombre,
+        documento: document.getElementById('documento_nuevo_cliente').value.trim() || null,
+        telefono: document.getElementById('telefono_nuevo_cliente').value.trim() || null,
+        email: document.getElementById('email_nuevo_cliente').value.trim() || null,
+        activo: true
+    };
+    
+    fetch('/clientes', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        return response.json().then(data => {
+            return { status: response.status, data };
+        });
+    })
+    .then(({ status, data }) => {
+        if (status === 200 && data.success) {
+            // Cerrar modal de nuevo cliente
+            const nuevoClienteModal = bootstrap.Modal.getInstance(document.getElementById('nuevoClienteModal'));
+            nuevoClienteModal.hide();
+            
+            // Agregar cliente a la lista de clientes disponibles
+            if (window.clientesData && data.cliente) {
+                window.clientesData.push(data.cliente);
+            }
+            
+            // Seleccionar automáticamente el cliente recién creado en la venta
+            seleccionarCliente(
+                data.cliente.id, 
+                data.cliente.nombre, 
+                data.cliente.documento || ''
+            );
+            
+            // Limpiar formulario
+            document.getElementById('formNuevoCliente').reset();
+        } else {
+            // Mostrar errores de validación
+            let mensajeError = 'Error al crear el cliente';
+            if (data.errors) {
+                const errores = Object.values(data.errors).flat().join(', ');
+                mensajeError += ': ' + errores;
+            } else if (data.message) {
+                mensajeError = data.message;
+            }
+            alert(mensajeError);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al crear el cliente. Por favor, intenta nuevamente.');
+    });
 }
 
 // ========== FILTROS AJAX (Sin recargar página) ==========

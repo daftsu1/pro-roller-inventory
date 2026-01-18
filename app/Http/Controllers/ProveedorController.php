@@ -70,14 +70,43 @@ class ProveedorController extends Controller
             ->with('success', 'Proveedor creado exitosamente.');
     }
 
-    public function show(Proveedor $proveedor)
+    public function show($proveedore)
     {
+        $proveedor = Proveedor::findOrFail($proveedore);
         $proveedor->load('productos');
+        
+        // Detectar si es petición AJAX/JSON
+        if (request()->expectsJson() || request()->ajax() || request()->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'proveedor' => [
+                    'id' => $proveedor->id,
+                    'nombre' => $proveedor->nombre ?? '',
+                    'contacto' => $proveedor->contacto ?? '',
+                    'telefono' => $proveedor->telefono ?? '',
+                    'email' => $proveedor->email ?? '',
+                    'created_at' => $proveedor->created_at ? $proveedor->created_at->toDateTimeString() : null,
+                    'productos' => $proveedor->productos->map(function($producto) {
+                        return [
+                            'id' => $producto->id,
+                            'codigo' => $producto->codigo ?? '',
+                            'nombre' => $producto->nombre ?? '',
+                            'precio_venta' => $producto->precio_venta ?? 0,
+                            'stock_actual' => $producto->stock_actual ?? 0,
+                            'activo' => $producto->activo ?? false
+                        ];
+                    })->toArray()
+                ]
+            ]);
+        }
+        
         return view('proveedores.show', compact('proveedor'));
     }
 
-    public function edit(Proveedor $proveedor)
+    public function edit($proveedore)
     {
+        $proveedor = Proveedor::findOrFail($proveedore);
+        
         if (request()->ajax()) {
             return response()->json([
                 'success' => true,
@@ -88,8 +117,10 @@ class ProveedorController extends Controller
         return view('proveedores.edit', compact('proveedor'));
     }
 
-    public function update(Request $request, Proveedor $proveedor)
+    public function update(Request $request, $proveedore)
     {
+        $proveedor = Proveedor::findOrFail($proveedore);
+        
         try {
             $validated = $request->validate([
                 'nombre' => 'required|string|max:255',
@@ -121,8 +152,10 @@ class ProveedorController extends Controller
             ->with('success', 'Proveedor actualizado exitosamente.');
     }
 
-    public function destroy(Proveedor $proveedor)
+    public function destroy($proveedore)
     {
+        $proveedor = Proveedor::findOrFail($proveedore);
+        
         // Verificar si tiene productos asociados
         if ($proveedor->productos()->count() > 0) {
             return redirect()->route('proveedores.index')

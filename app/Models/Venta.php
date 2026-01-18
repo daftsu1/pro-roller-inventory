@@ -19,6 +19,8 @@ class Venta extends Model
         'cliente_nombre',
         'cliente_documento',
         'total',
+        'descuento_porcentaje',
+        'descuento_monto',
         'usuario_id',
         'estado',
     ];
@@ -26,6 +28,8 @@ class Venta extends Model
     protected $casts = [
         'fecha' => 'date',
         'total' => 'decimal:2',
+        'descuento_porcentaje' => 'decimal:2',
+        'descuento_monto' => 'decimal:2',
     ];
 
     public function usuario(): BelongsTo
@@ -46,6 +50,49 @@ class Venta extends Model
     public function movimientos(): HasMany
     {
         return $this->hasMany(MovimientoInventario::class);
+    }
+
+    /**
+     * Calcular subtotal de un detalle considerando descuentos por producto
+     */
+    public static function calcularSubtotalConDescuento($cantidad, $precioUnitario, $descuentoPorcentaje = 0, $descuentoMonto = 0)
+    {
+        $subtotal = $cantidad * $precioUnitario;
+        
+        // Aplicar descuento por porcentaje primero, luego por monto
+        if ($descuentoPorcentaje > 0) {
+            $descuento = $subtotal * ($descuentoPorcentaje / 100);
+            $subtotal -= $descuento;
+        }
+        
+        if ($descuentoMonto > 0) {
+            $subtotal -= $descuentoMonto;
+        }
+        
+        return max(0, $subtotal); // No permitir subtotal negativo
+    }
+
+    /**
+     * Calcular total de la venta considerando descuentos por producto y descuento sobre el total
+     */
+    public function calcularTotalConDescuentos()
+    {
+        // Sumar subtotales de todos los detalles (ya con descuentos por producto aplicados)
+        $subtotalVenta = $this->detalles->sum('subtotal');
+        
+        // Aplicar descuento sobre el total de la venta
+        $total = $subtotalVenta;
+        
+        if ($this->descuento_porcentaje > 0) {
+            $descuento = $subtotalVenta * ($this->descuento_porcentaje / 100);
+            $total -= $descuento;
+        }
+        
+        if ($this->descuento_monto > 0) {
+            $total -= $this->descuento_monto;
+        }
+        
+        return max(0, $total); // No permitir total negativo
     }
 
     public static function crearConMovimientos(array $datos)
@@ -79,7 +126,17 @@ class Venta extends Model
                     }
                 }
 
-                $subtotal = $productoData['cantidad'] * $producto->precio_venta;
+                // Calcular descuentos por producto
+                $descuentoPorcentaje = $productoData['descuento_porcentaje'] ?? 0;
+                $descuentoMonto = $productoData['descuento_monto'] ?? 0;
+                
+                // Calcular subtotal con descuentos
+                $subtotal = self::calcularSubtotalConDescuento(
+                    $productoData['cantidad'],
+                    $producto->precio_venta,
+                    $descuentoPorcentaje,
+                    $descuentoMonto
+                );
                 $total += $subtotal;
 
                 // Crear detalle de venta
@@ -87,6 +144,8 @@ class Venta extends Model
                     'producto_id' => $producto->id,
                     'cantidad' => $productoData['cantidad'],
                     'precio_unitario' => $producto->precio_venta,
+                    'descuento_porcentaje' => $descuentoPorcentaje,
+                    'descuento_monto' => $descuentoMonto,
                     'subtotal' => $subtotal,
                 ]);
 
@@ -109,8 +168,20 @@ class Venta extends Model
                 }
             }
 
-            // Actualizar total de venta
-            $venta->update(['total' => $total]);
+            // Actualizar descuentos sobre el total si se proporcionan
+            $updateData = ['total' => $total];
+            if (isset($datos['descuento_porcentaje'])) {
+                $updateData['descuento_porcentaje'] = $datos['descuento_porcentaje'];
+            }
+            if (isset($datos['descuento_monto'])) {
+                $updateData['descuento_monto'] = $datos['descuento_monto'];
+            }
+            
+            $venta->update($updateData);
+            
+            // Recalcular total considerando descuentos sobre el total
+            $totalFinal = $venta->calcularTotalConDescuentos();
+            $venta->update(['total' => $totalFinal]);
 
             return $venta;
         });
