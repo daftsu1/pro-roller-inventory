@@ -82,8 +82,8 @@
             top: 0;
             z-index: 999;
         }
-        /* Para pantallas menores a 992px (tablets y pantallas pequeñas) */
-        @media (max-width: 991.98px) {
+        /* Para pantallas menores a 1400px (laptops pequeñas y tablets) */
+        @media (max-width: 1399.98px) {
             .sidebar {
                 transform: translateX(-100%);
                 width: 260px;
@@ -287,7 +287,7 @@
         
         // Cerrar sidebar al hacer clic en un enlace (móviles)
         document.addEventListener('DOMContentLoaded', function() {
-            if (window.innerWidth <= 991) {
+            if (window.innerWidth <= 1399) {
                 const navLinks = document.querySelectorAll('.sidebar .nav-link');
                 navLinks.forEach(link => {
                     link.addEventListener('click', function() {
@@ -298,7 +298,7 @@
             
             // Ajustar sidebar en resize
             window.addEventListener('resize', function() {
-                if (window.innerWidth > 991) {
+                if (window.innerWidth > 1399) {
                     const sidebar = document.getElementById('sidebar');
                     const overlay = document.getElementById('sidebarOverlay');
                     sidebar.classList.remove('show');
