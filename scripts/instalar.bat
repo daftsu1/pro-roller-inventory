@@ -98,6 +98,15 @@ if !MYSQL_OK! EQU 0 (
 echo.
 echo [4/8] Instalando dependencias de Composer...
 echo        Esto puede tardar varios minutos...
+
+REM Crear directorios necesarios para Laravel antes de composer install
+if not exist "bootstrap\cache" mkdir "bootstrap\cache" 2>nul
+if not exist "storage\app" mkdir "storage\app" 2>nul
+if not exist "storage\framework\cache" mkdir "storage\framework\cache" 2>nul
+if not exist "storage\framework\sessions" mkdir "storage\framework\sessions" 2>nul
+if not exist "storage\framework\views" mkdir "storage\framework\views" 2>nul
+if not exist "storage\logs" mkdir "storage\logs" 2>nul
+
 call composer install --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-reqs
 if %ERRORLEVEL% NEQ 0 (
     echo.
