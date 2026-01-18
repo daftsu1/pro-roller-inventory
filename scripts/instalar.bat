@@ -31,9 +31,15 @@ if not exist "composer.json" (
 )
 
 echo [1/8] Verificando PHP...
-php -v >nul 2>&1
+where php >nul 2>&1
 if errorlevel 1 (
     echo [ERROR] PHP no encontrado. Por favor instala XAMPP primero.
+    pause
+    exit /b 1
+)
+php -v >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] PHP no funciona correctamente.
     pause
     exit /b 1
 )
@@ -41,10 +47,16 @@ echo [OK] PHP detectado
 
 echo.
 echo [2/8] Verificando Composer...
+where composer >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Composer no encontrado en el PATH.
+    echo        Por favor instalalo primero desde: https://getcomposer.org/download/
+    pause
+    exit /b 1
+)
 composer --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Composer no encontrado. Por favor instalalo primero.
-    echo        Descarga desde: https://getcomposer.org/download/
+    echo [ERROR] Composer no funciona correctamente.
     pause
     exit /b 1
 )
