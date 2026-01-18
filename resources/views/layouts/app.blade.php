@@ -62,6 +62,7 @@
             background: #f8f9fa;
             min-height: 100vh;
             margin-left: 220px;
+            padding: 0;
         }
         .sidebar-overlay {
             display: none;
@@ -81,8 +82,11 @@
             background: #343a40;
             color: white;
             padding: 0.75rem 1rem;
-            position: sticky;
+            position: fixed;
             top: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
             z-index: 999;
         }
         /* Para pantallas menores a 1400px (laptops pequeñas y tablets) */
@@ -96,12 +100,11 @@
             }
             .main-content {
                 margin-left: 0;
-            }
-            body {
-                padding-top: 56px;
+                padding: 0;
+                margin-top: 56px;
             }
             .mobile-header {
-                display: block;
+                display: flex;
             }
         }
         .table-responsive {
