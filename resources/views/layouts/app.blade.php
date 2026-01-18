@@ -24,15 +24,6 @@
             display: flex;
             flex-direction: column;
         }
-        @media (max-width: 767.98px) {
-            .sidebar {
-                transform: translateX(-100%);
-                width: 260px;
-            }
-            .sidebar.show {
-                transform: translateX(0);
-            }
-        }
         .sidebar-content {
             flex: 1;
             overflow-y: auto;
@@ -69,16 +60,6 @@
             min-height: 100vh;
             margin-left: 220px;
         }
-        @media (max-width: 767.98px) {
-            .main-content {
-                margin-left: 0;
-            }
-        }
-        @media (max-width: 767.98px) {
-            body {
-                padding-top: 56px;
-            }
-        }
         .sidebar-overlay {
             display: none;
             position: fixed;
@@ -101,7 +82,21 @@
             top: 0;
             z-index: 999;
         }
-        @media (max-width: 767.98px) {
+        /* Para pantallas menores a 992px (tablets y pantallas pequeñas) */
+        @media (max-width: 991.98px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: 260px;
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            body {
+                padding-top: 56px;
+            }
             .mobile-header {
                 display: block;
             }
@@ -292,7 +287,7 @@
         
         // Cerrar sidebar al hacer clic en un enlace (móviles)
         document.addEventListener('DOMContentLoaded', function() {
-            if (window.innerWidth <= 767) {
+            if (window.innerWidth <= 991) {
                 const navLinks = document.querySelectorAll('.sidebar .nav-link');
                 navLinks.forEach(link => {
                     link.addEventListener('click', function() {
@@ -303,7 +298,13 @@
             
             // Ajustar sidebar en resize
             window.addEventListener('resize', function() {
-                if (window.innerWidth > 767) {
+                if (window.innerWidth > 991) {
+                    const sidebar = document.getElementById('sidebar');
+                    const overlay = document.getElementById('sidebarOverlay');
+                    sidebar.classList.remove('show');
+                    overlay.classList.remove('show');
+                } else {
+                    // Si vuelve a ser pantalla pequeña, cerrar el sidebar por defecto
                     const sidebar = document.getElementById('sidebar');
                     const overlay = document.getElementById('sidebarOverlay');
                     sidebar.classList.remove('show');
