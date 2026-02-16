@@ -25,6 +25,12 @@ RUN docker-php-ext-install \
     gd \
     zip
 
+# Extensión Redis (para queue/cache con QUEUE_CONNECTION=redis)
+RUN apk add --no-cache --virtual .build-deps autoconf gcc g++ make \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del .build-deps
+
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
