@@ -23,7 +23,7 @@ services:
       - DB_PORT=3306
       - DB_DATABASE=${DB_DATABASE:-pro_roller}
       - DB_USERNAME=${DB_USERNAME:-root}
-      - DB_PASSWORD=${DB_PASSWORD:-}
+      - DB_PASSWORD=${DB_PASSWORD:asp-roller}
 
     depends_on:
       - db
@@ -45,9 +45,7 @@ services:
 
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-pro_roller}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-}
-      MYSQL_USER: ${DB_USERNAME:-root}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:asp-roller}
 
     volumes:
       - db_data:/var/lib/mysql
