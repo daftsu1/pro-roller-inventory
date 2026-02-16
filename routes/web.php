@@ -10,6 +10,7 @@ use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\InformeController;
+use App\Http\Controllers\ConteoFisicoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -61,6 +62,18 @@ Route::middleware(['auth'])->group(function () {
     Route::get('informes/stock-bajo', [InformeController::class, 'stockBajo'])->name('informes.stock-bajo');
     Route::get('informes/clientes', [InformeController::class, 'clientes'])->name('informes.clientes');
     Route::get('informes/resumen', [InformeController::class, 'resumen'])->name('informes.resumen');
+    
+    // Conteos físicos
+    Route::resource('conteos', ConteoFisicoController::class)->except(['edit', 'update', 'destroy']);
+    Route::get('conteos/{conteo}/escanear', [ConteoFisicoController::class, 'escanear'])->name('conteos.escanear');
+    Route::post('conteos/{conteo}/escanear', [ConteoFisicoController::class, 'procesarEscaneo'])->name('conteos.procesar-escaneo');
+    Route::put('conteos/{conteo}/detalles/{detalle}/cantidad', [ConteoFisicoController::class, 'actualizarCantidadManual'])->name('conteos.actualizar-cantidad');
+    Route::post('conteos/{conteo}/finalizar', [ConteoFisicoController::class, 'finalizar'])->name('conteos.finalizar');
+    Route::get('conteos/{conteo}/revisar', [ConteoFisicoController::class, 'revisar'])->name('conteos.revisar');
+    Route::post('conteos/{conteo}/aplicar-ajustes', [ConteoFisicoController::class, 'aplicarAjustes'])->name('conteos.aplicar-ajustes');
+    Route::get('conteos/{conteo}/reporte-diferencias', [ConteoFisicoController::class, 'reporteDiferencias'])->name('conteos.reporte-diferencias');
+    Route::post('conteos/{conteo}/cancelar', [ConteoFisicoController::class, 'cancelar'])->name('conteos.cancelar');
+    Route::post('conteos/{conteo}/agregar-productos', [ConteoFisicoController::class, 'agregarProductos'])->name('conteos.agregar-productos');
 });
 
 require __DIR__.'/auth.php';

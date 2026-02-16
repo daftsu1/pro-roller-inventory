@@ -65,7 +65,7 @@ class MovimientoInventarioController extends Controller
         $validated = $request->validate([
             'producto_id' => 'required|exists:productos,id',
             'tipo' => 'required|in:entrada,salida',
-            'cantidad' => 'required|numeric|min:0.01',
+            'cantidad' => 'required|integer|min:1',
             'motivo' => 'required|string|max:255',
             'fecha' => 'required|date',
             'referencia' => 'nullable|string|max:255',

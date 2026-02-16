@@ -12,8 +12,12 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     
     <style>
+        :root {
+            --mobile-header-height: 64px;
+            --sidebar-width: 220px;
+        }
         .sidebar {
-            width: 220px;
+            width: var(--sidebar-width);
             height: 100vh;
             max-height: 100vh;
             background: #343a40;
@@ -61,8 +65,11 @@
         .main-content {
             background: #f8f9fa;
             min-height: 100vh;
-            margin-left: 220px;
+            /* En escritorio, dejamos espacio para el sidebar SIN superposición */
+            margin-left: var(--sidebar-width);
+            width: calc(100% - var(--sidebar-width));
             padding: 0;
+            overflow-x: hidden;
         }
         .sidebar-overlay {
             display: none;
@@ -78,7 +85,7 @@
             display: block;
         }
         .mobile-header {
-            display: none;
+            display: none !important; /* Bootstrap .d-flex usa !important */
             background: #343a40;
             color: white;
             padding: 0.75rem 1rem;
@@ -89,8 +96,14 @@
             width: 100%;
             z-index: 999;
         }
-        /* Para pantallas menores a 1400px (laptops pequeñas y tablets) */
-        @media (max-width: 1399.98px) {
+        /* Evitar “raya” azul del focus ring en el header */
+        .mobile-header .btn:focus,
+        .mobile-header .btn:focus-visible {
+            box-shadow: none !important;
+            outline: none !important;
+        }
+        /* Modo móvil REAL: SOLO bajo 576px (sm) */
+        @media (max-width: 575.98px) {
             .sidebar {
                 transform: translateX(-100%);
                 width: 260px;
@@ -100,11 +113,14 @@
             }
             .main-content {
                 margin-left: 0;
+                width: 100%;
                 padding: 0;
-                margin-top: 56px;
+                margin-top: var(--mobile-header-height);
             }
             .mobile-header {
-                display: flex;
+                display: flex !important;
+                height: var(--mobile-header-height);
+                align-items: center;
             }
         }
         .table-responsive {
@@ -133,7 +149,7 @@
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
     
     <!-- Header móvil -->
-    <div class="mobile-header d-flex justify-content-between align-items-center">
+    <div class="mobile-header justify-content-between align-items-center">
         <div>
             <button class="btn btn-link text-white p-0 me-2" onclick="toggleSidebar()">
                 <i class="bi bi-list fs-4"></i>
@@ -227,6 +243,12 @@
                             </a>
                         </li>
                         
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('conteos.*') ? 'active' : '' }}" href="{{ route('conteos.index') }}">
+                                <i class="bi bi-clipboard-check"></i> Conteos Físicos
+                            </a>
+                        </li>
+                        
                         @role('admin')
                         <li class="nav-item mt-3">
                             <hr class="text-white-50">
@@ -293,7 +315,7 @@
         
         // Cerrar sidebar al hacer clic en un enlace (móviles)
         document.addEventListener('DOMContentLoaded', function() {
-            if (window.innerWidth <= 1399) {
+            if (window.innerWidth <= 575) {
                 const navLinks = document.querySelectorAll('.sidebar .nav-link');
                 navLinks.forEach(link => {
                     link.addEventListener('click', function() {
@@ -304,7 +326,7 @@
             
             // Ajustar sidebar en resize
             window.addEventListener('resize', function() {
-                if (window.innerWidth > 1399) {
+                if (window.innerWidth > 575) {
                     const sidebar = document.getElementById('sidebar');
                     const overlay = document.getElementById('sidebarOverlay');
                     sidebar.classList.remove('show');
