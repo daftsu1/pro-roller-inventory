@@ -75,8 +75,7 @@ class DatabaseSeeder extends Seeder
 
     private function crearUsuarios()
     {
-        // Admin
-        $admin = User::firstOrCreate(
+        $admin = User::updateOrCreate(
             ['email' => 'admin@proroller.cl'],
             [
                 'nombre' => 'Administrador',
@@ -87,7 +86,7 @@ class DatabaseSeeder extends Seeder
         $admin->assignRole('admin');
         
         // Vendedor
-        $vendedor = User::firstOrCreate(
+        $vendedor = User::updateOrCreate(
             ['email' => 'vendedor@proroller.cl'],
             [
                 'nombre' => 'Vendedor',
