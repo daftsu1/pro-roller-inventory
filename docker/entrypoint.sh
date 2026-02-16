@@ -32,14 +32,17 @@ if [ ! -f .env ]; then
     cp .env.example .env
 fi
 
-# Si tenemos variables del compose (Docker), sobrescribir en .env para que queue/redis usen el contenedor
+# Si tenemos variables del compose (Docker), sobrescribir en .env (sin sed -i, compatible Alpine/BusyBox)
 if [ -n "${APP_KEY}" ]; then
     echo "Ajustando .env con variables del contenedor..."
-    [ -n "${QUEUE_CONNECTION}" ] && sed -i "s/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=${QUEUE_CONNECTION}/" .env || true
-    [ -n "${REDIS_HOST}" ] && sed -i "s/^REDIS_HOST=.*/REDIS_HOST=${REDIS_HOST}/" .env || true
-    [ -n "${REDIS_PORT}" ] && sed -i "s/^REDIS_PORT=.*/REDIS_PORT=${REDIS_PORT}/" .env || true
-    grep -q "^REDIS_CLIENT=" .env && sed -i "s/^REDIS_CLIENT=.*/REDIS_CLIENT=${REDIS_CLIENT:-predis}/" .env || echo "REDIS_CLIENT=predis" >> .env
-    grep -q "^APP_KEY=" .env && sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" .env || echo "APP_KEY=${APP_KEY}" >> .env
+    _env_tmp=$(mktemp)
+    grep -v "^QUEUE_CONNECTION=" .env | grep -v "^REDIS_HOST=" | grep -v "^REDIS_PORT=" | grep -v "^REDIS_CLIENT=" | grep -v "^APP_KEY=" > "${_env_tmp}"
+    echo "QUEUE_CONNECTION=${QUEUE_CONNECTION:-redis}" >> "${_env_tmp}"
+    echo "REDIS_HOST=${REDIS_HOST:-redis}" >> "${_env_tmp}"
+    echo "REDIS_PORT=${REDIS_PORT:-6379}" >> "${_env_tmp}"
+    echo "REDIS_CLIENT=${REDIS_CLIENT:-predis}" >> "${_env_tmp}"
+    echo "APP_KEY=${APP_KEY}" >> "${_env_tmp}"
+    mv "${_env_tmp}" .env
 fi
 
 if [ -z "$(grep APP_KEY .env | cut -d '=' -f2)" ] || [ "$(grep APP_KEY .env | cut -d '=' -f2)" = "" ]; then
