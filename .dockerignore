@@ -22,6 +22,7 @@ node_modules
 /public/hot
 /public/storage
 /public/build
+/bootstrap/cache
 /tests
 .phpunit.cache
 docker-compose.yml

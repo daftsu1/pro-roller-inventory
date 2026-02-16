@@ -9,7 +9,6 @@ services:
 
     volumes:
       - ./storage:/var/www/html/storage
-      - ./bootstrap/cache:/var/www/html/bootstrap/cache
 
     expose:
       - "80"
@@ -54,7 +53,6 @@ services:
     command: php artisan horizon
     volumes:
       - ./storage:/var/www/html/storage
-      - ./bootstrap/cache:/var/www/html/bootstrap/cache
     environment:
       - APP_KEY=${APP_KEY}
       - APP_ENV=production
