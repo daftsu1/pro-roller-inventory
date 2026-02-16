@@ -26,10 +26,20 @@ chown -R www-data:www-data /var/www/html/bootstrap/cache
 chmod -R 775 /var/www/html/storage
 chmod -R 775 /var/www/html/bootstrap/cache
 
-# Generar clave de aplicación si no existe
+# Copiar .env si no existe
 if [ ! -f .env ]; then
     echo "Copiando .env.example a .env..."
     cp .env.example .env
+fi
+
+# Si tenemos variables del compose (Docker), sobrescribir en .env para que queue/redis usen el contenedor
+if [ -n "${APP_KEY}" ]; then
+    echo "Ajustando .env con variables del contenedor..."
+    [ -n "${QUEUE_CONNECTION}" ] && sed -i "s/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=${QUEUE_CONNECTION}/" .env || true
+    [ -n "${REDIS_HOST}" ] && sed -i "s/^REDIS_HOST=.*/REDIS_HOST=${REDIS_HOST}/" .env || true
+    [ -n "${REDIS_PORT}" ] && sed -i "s/^REDIS_PORT=.*/REDIS_PORT=${REDIS_PORT}/" .env || true
+    grep -q "^REDIS_CLIENT=" .env && sed -i "s/^REDIS_CLIENT=.*/REDIS_CLIENT=${REDIS_CLIENT:-predis}/" .env || echo "REDIS_CLIENT=predis" >> .env
+    grep -q "^APP_KEY=" .env && sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" .env || echo "APP_KEY=${APP_KEY}" >> .env
 fi
 
 if [ -z "$(grep APP_KEY .env | cut -d '=' -f2)" ] || [ "$(grep APP_KEY .env | cut -d '=' -f2)" = "" ]; then
