@@ -36,6 +36,9 @@ COPY docker/php.ini /usr/local/etc/php/conf.d/custom.ini
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Crear directorio de logs para Supervisor
+RUN mkdir -p /var/log/supervisor
+
 # Copiar archivos de la aplicación
 COPY . .
 
