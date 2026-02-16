@@ -1,5 +1,5 @@
 # Multi-stage build para optimizar el tamaño de la imagen
-FROM php:8.1-fpm-alpine AS base
+FROM php:8.2-fpm-alpine AS base
 
 # Instalar dependencias del sistema
 RUN apk add --no-cache \
