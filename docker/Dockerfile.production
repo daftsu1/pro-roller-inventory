@@ -39,6 +39,10 @@ COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Copiar archivos de la aplicación
 COPY . .
 
+RUN mkdir -p storage bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
 # Instalar dependencias de Composer (sin dev)
 RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist \
     && composer dump-autoload --optimize
