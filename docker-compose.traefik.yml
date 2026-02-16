@@ -1,0 +1,34 @@
+# Traefik: proxy inverso + HTTPS con certificado autofirmado (solo IP)
+# Antes la primera vez, en el servidor:
+#   mkdir -p certs && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+#     -keyout certs/key.pem -out certs/cert.pem -subj "/CN=localhost"
+# Luego: docker compose -f docker-compose.traefik.yml up -d
+
+services:
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik
+    restart: always
+
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # Certificado autofirmado (el navegador mostrará advertencia; aceptas y listo)
+      - "--tls.stores.default.defaultcertificate.certfile=/certs/cert.pem"
+      - "--tls.stores.default.defaultcertificate.keyfile=/certs/key.pem"
+
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - ./certs:/certs:ro
+
+    environment:
+      - DOCKER_API_VERSION=1.44
