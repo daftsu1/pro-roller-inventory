@@ -22,20 +22,64 @@ services:
       - DB_DATABASE=${DB_DATABASE:-pro_roller}
       - DB_USERNAME=root
       - DB_PASSWORD=${DB_PASSWORD:-asp-roller}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - QUEUE_CONNECTION=redis
 
     depends_on:
       - db
+      - redis
 
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.inventory.rule=PathPrefix(`/`)"
       - "traefik.http.routers.inventory.entrypoints=web"
       - "traefik.http.services.inventory.loadbalancer.server.port=80"
-      - "traefik.docker.network=traefik_default"
+      - "traefik.docker.network=traefik"
 
     networks:
       - pro_roller_network
-      - traefik_default
+      - traefik
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.production
+    container_name: pro_roller_worker
+    restart: unless-stopped
+    working_dir: /var/www/html
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-pro_roller}
+      - DB_USERNAME=root
+      - DB_PASSWORD=${DB_PASSWORD:-asp-roller}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - QUEUE_CONNECTION=redis
+    depends_on:
+      - db
+      - redis
+    networks:
+      - pro_roller_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: pro_roller_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/var/lib/redis
+    networks:
+      - pro_roller_network
 
   db:
     image: mysql:8.0
@@ -57,10 +101,12 @@ services:
 volumes:
   db_data:
     driver: local
+  redis_data:
+    driver: local
 
 networks:
   pro_roller_network:
     driver: bridge
 
-  traefik_default:
+  traefik:
     external: true
