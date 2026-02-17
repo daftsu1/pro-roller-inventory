@@ -94,9 +94,9 @@ docker compose -f docker-compose.production.yml up -d
 
 ## 6. Probar
 
-- HTTP: `http://TU_IP`
-- HTTPS: `https://TU_IP` (el navegador avisará; "Avanzado" → "Acceder")
-- Dashboard Traefik: `http://TU_IP:8080`
+- **Tu app HTTP:** `http://TU_IP`
+- **Tu app HTTPS:** `https://TU_IP` (el navegador avisará; "Avanzado" → "Acceder")
+- **Dashboard Traefik:** `http://TU_IP:8080/dashboard/` — **solo HTTP** (no uses https en el 8080, da 404)
 
 ---
 

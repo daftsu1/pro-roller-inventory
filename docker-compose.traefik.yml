@@ -1,12 +1,33 @@
 # Traefik: proxy inverso + HTTPS (solo IP)
-# Sin certs en ./certs, Traefik genera uno al vuelo; el navegador avisará y listo.
-# Opcional: genera certs con scripts/generate-traefik-cert.sh y monta ./certs para uno fijo.
+# Certificado autofirmado se genera solo la primera vez (servicio certs-init).
+# Dashboard: http://TU_IP:8080/dashboard/ (solo HTTP; el 8080 no usa HTTPS).
 
 services:
+  certs-init:
+    image: alpine:3.19
+    container_name: traefik_certs_init
+    restart: "no"
+    volumes:
+      - traefik_certs:/certs
+    command:
+      - sh
+      - -c
+      - |
+        apk add --no-cache openssl
+        if [ ! -f /certs/cert.pem ]; then
+          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout /certs/key.pem -out /certs/cert.pem -subj /CN=localhost
+          chmod 600 /certs/key.pem /certs/cert.pem
+        fi
+    networks:
+      - default
+
   traefik:
     image: traefik:v2.11
     container_name: traefik
     restart: always
+    depends_on:
+      - certs-init
 
     command:
       - "--api.dashboard=true"
@@ -15,10 +36,8 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      # Sin cert propio: Traefik usa cert autogenerado (aviso en el navegador)
-      # Si tienes ./certs con cert.pem y key.pem, descomenta las 2 líneas de abajo:
-      # - "--tls.stores.default.defaultcertificate.certfile=/certs/cert.pem"
-      # - "--tls.stores.default.defaultcertificate.keyfile=/certs/key.pem"
+      - "--tls.stores.default.defaultcertificate.certfile=/certs/cert.pem"
+      - "--tls.stores.default.defaultcertificate.keyfile=/certs/key.pem"
 
     ports:
       - "80:80"
@@ -27,7 +46,7 @@ services:
 
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      # - ./certs:/certs:ro   # descomenta si generaste certs con el script
+      - traefik_certs:/certs:ro
 
     environment:
       - DOCKER_API_VERSION=1.44
@@ -38,3 +57,6 @@ services:
 networks:
   default:
     name: traefik_default
+
+volumes:
+  traefik_certs:
