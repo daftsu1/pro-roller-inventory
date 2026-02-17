@@ -1,5 +1,19 @@
-# Configuración estática de Traefik (certificado por defecto para HTTPS)
-# El resto (entrypoints, api, providers) se pasa por command en docker-compose.
+# Configuración estática completa de Traefik v2
+
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
 
 tls:
   stores:
