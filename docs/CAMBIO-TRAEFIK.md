@@ -121,3 +121,27 @@ docker compose -f docker-compose.production.yml up -d
 ```
 
 Sustituye `/ruta/a/pro-roller-inventory` por la ruta real en tu servidor (por ejemplo `~/pro-roller-inventory` o `/var/www/pro-roller-inventory`).
+
+---
+
+## Si Traefik no arranca o no enruta
+
+1. **Ver estado y logs:**
+   ```bash
+   cd /ruta/a/pro-roller-inventory
+   bash scripts/diagnostico-traefik.sh
+   ```
+
+2. **Recrear desde cero (borra el volumen de certs):**
+   ```bash
+   docker compose -f docker-compose.traefik.yml down -v
+   docker compose -f docker-compose.traefik.yml up -d
+   docker logs traefik
+   ```
+
+3. **Comprobar que la red existe:**
+   ```bash
+   docker network create traefik_default
+   ```
+
+4. **Probar solo HTTP (puerto 80):** `http://TU_IP` — si eso va y HTTPS no, el fallo es el certificado.
