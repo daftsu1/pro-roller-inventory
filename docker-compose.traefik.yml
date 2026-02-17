@@ -25,14 +25,13 @@ services:
         condition: service_completed_successfully
 
     command:
+      - "--configFile=/etc/traefik/static.yml"
       - "--api.dashboard=true"
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--tls.stores.default.defaultcertificate.certfile=/certs/cert.pem"
-      - "--tls.stores.default.defaultcertificate.keyfile=/certs/key.pem"
 
     ports:
       - "80:80"
@@ -42,6 +41,7 @@ services:
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - traefik_certs:/certs:ro
+      - ./docker/traefik-static.yml:/etc/traefik/static.yml:ro
 
     environment:
       - DOCKER_API_VERSION=1.44

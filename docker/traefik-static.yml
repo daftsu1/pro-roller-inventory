@@ -1,0 +1,9 @@
+# Configuración estática de Traefik (certificado por defecto para HTTPS)
+# El resto (entrypoints, api, providers) se pasa por command en docker-compose.
+
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/cert.pem
+        keyFile: /certs/key.pem
