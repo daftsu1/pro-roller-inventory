@@ -1,4 +1,4 @@
-#!/bin/sh
+mmmh #!/bin/sh
 # Deploy pro-roller-inventory en VPS
 # Siempre: pull, build app/worker, recrear solo app y worker.
 # DB y Redis no se recrean (sus datos están en volúmenes; recrearlos no borra datos, pero evitas tocarlos).

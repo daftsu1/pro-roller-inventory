@@ -116,18 +116,21 @@ services:
       - traefik_default
     labels:
       - "traefik.enable=true"
+      # Header para que Adminer redirija a /adminer/ (evita que tras login recargue la misma página)
+      - "traefik.http.middlewares.adminer-prefix.headers.customrequestheaders.X-Forwarded-Prefix=/adminer"
+      - "traefik.http.middlewares.adminer-strip.stripprefix.prefixes=/adminer"
+      - "traefik.http.middlewares.adminer-chain.chain.middlewares=adminer-prefix,adminer-strip"
       # HTTP
       - "traefik.http.routers.adminer.rule=PathPrefix(`/adminer`)"
       - "traefik.http.routers.adminer.entrypoints=web"
       - "traefik.http.services.adminer.loadbalancer.server.port=8080"
-      - "traefik.http.middlewares.adminer-strip.stripprefix.prefixes=/adminer"
-      - "traefik.http.routers.adminer.middlewares=adminer-strip"
+      - "traefik.http.routers.adminer.middlewares=adminer-chain"
       # HTTPS
       - "traefik.http.routers.adminer-secure.rule=PathPrefix(`/adminer`)"
       - "traefik.http.routers.adminer-secure.entrypoints=websecure"
       - "traefik.http.routers.adminer-secure.tls=true"
       - "traefik.http.routers.adminer-secure.service=adminer"
-      - "traefik.http.routers.adminer-secure.middlewares=adminer-strip"
+      - "traefik.http.routers.adminer-secure.middlewares=adminer-chain"
       - "traefik.docker.network=traefik_default"
 
 volumes:
