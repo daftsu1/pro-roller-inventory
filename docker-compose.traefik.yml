@@ -1,8 +1,6 @@
-# Traefik: proxy inverso + HTTPS con certificado autofirmado (solo IP)
-# Antes la primera vez, en el servidor:
-#   mkdir -p certs && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-#     -keyout certs/key.pem -out certs/cert.pem -subj "/CN=localhost"
-# Luego: docker compose -f docker-compose.traefik.yml up -d
+# Traefik: proxy inverso + HTTPS (solo IP)
+# Sin certs en ./certs, Traefik genera uno al vuelo; el navegador avisará y listo.
+# Opcional: genera certs con scripts/generate-traefik-cert.sh y monta ./certs para uno fijo.
 
 services:
   traefik:
@@ -17,9 +15,10 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      # Certificado autofirmado (el navegador mostrará advertencia; aceptas y listo)
-      - "--tls.stores.default.defaultcertificate.certfile=/certs/cert.pem"
-      - "--tls.stores.default.defaultcertificate.keyfile=/certs/key.pem"
+      # Sin cert propio: Traefik usa cert autogenerado (aviso en el navegador)
+      # Si tienes ./certs con cert.pem y key.pem, descomenta las 2 líneas de abajo:
+      # - "--tls.stores.default.defaultcertificate.certfile=/certs/cert.pem"
+      # - "--tls.stores.default.defaultcertificate.keyfile=/certs/key.pem"
 
     ports:
       - "80:80"
@@ -28,7 +27,14 @@ services:
 
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - ./certs:/certs:ro
+      # - ./certs:/certs:ro   # descomenta si generaste certs con el script
 
     environment:
       - DOCKER_API_VERSION=1.44
+
+    networks:
+      - default
+
+networks:
+  default:
+    name: traefik_default
