@@ -320,7 +320,7 @@ class ConteoFisicoController extends Controller
 
         return DB::transaction(function () use ($conteo, $validated) {
             // Buscar producto por código
-            $producto = Producto::where('codigo', $validated['codigo'])
+            $producto = Producto::buscarPorCodigo($validated['codigo'])
                 ->where('activo', true)
                 ->first();
 

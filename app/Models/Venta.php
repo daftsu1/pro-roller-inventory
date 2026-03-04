@@ -21,6 +21,8 @@ class Venta extends Model
         'total',
         'descuento_porcentaje',
         'descuento_monto',
+        'tiene_instalacion',
+        'monto_instalacion',
         'usuario_id',
         'estado',
     ];
@@ -30,6 +32,8 @@ class Venta extends Model
         'total' => 'decimal:2',
         'descuento_porcentaje' => 'decimal:2',
         'descuento_monto' => 'decimal:2',
+        'tiene_instalacion' => 'boolean',
+        'monto_instalacion' => 'decimal:2',
     ];
 
     public function usuario(): BelongsTo
@@ -73,7 +77,7 @@ class Venta extends Model
     }
 
     /**
-     * Calcular total de la venta considerando descuentos por producto y descuento sobre el total
+     * Calcular total de la venta considerando descuentos por producto, descuento sobre el total e instalación
      */
     public function calcularTotalConDescuentos()
     {
@@ -92,7 +96,33 @@ class Venta extends Model
             $total -= $this->descuento_monto;
         }
         
+        // Sumar costo de instalación si aplica
+        if ($this->tiene_instalacion && $this->monto_instalacion > 0) {
+            $total += (float) $this->monto_instalacion;
+        }
+        
         return max(0, $total); // No permitir total negativo
+    }
+
+    public function tieneInstalacion(): bool
+    {
+        return (bool) $this->tiene_instalacion;
+    }
+
+    /**
+     * Subtotal sin incluir el monto de instalación (productos + descuentos aplicados)
+     */
+    public function subtotalSinInstalacion(): float
+    {
+        $subtotalVenta = $this->detalles->sum('subtotal');
+        $total = $subtotalVenta;
+        if ($this->descuento_porcentaje > 0) {
+            $total -= $subtotalVenta * ($this->descuento_porcentaje / 100);
+        }
+        if ($this->descuento_monto > 0) {
+            $total -= (float) $this->descuento_monto;
+        }
+        return max(0, $total);
     }
 
     public static function crearConMovimientos(array $datos)

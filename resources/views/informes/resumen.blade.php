@@ -78,6 +78,22 @@
             </div>
         </div>
     </div>
+    <div class="col-md-3 mb-3">
+        <div class="card border-info">
+            <div class="card-body">
+                <h6 class="text-muted mb-1">Ingresos por instalación</h6>
+                <h3 class="mb-0 text-info">${{ number_format($totalInstalacion ?? 0, 0, ',', '.') }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted mb-1">% de ventas con instalación</h6>
+                <h3 class="mb-0">{{ $porcentajeVentasConInstalacion ?? 0 }}% <small class="text-muted">({{ $cantidadVentasConInstalacion ?? 0 }}/{{ $resumenVentas->total_ventas ?? 0 }})</small></h3>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Resumen de Inventario -->

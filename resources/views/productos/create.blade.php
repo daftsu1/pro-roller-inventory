@@ -43,6 +43,17 @@
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>
+
+            <div class="mb-3">
+                <label for="codigos_barras" class="form-label">Códigos de barras alternativos</label>
+                <textarea class="form-control @error('codigos_barras') is-invalid @enderror"
+                          id="codigos_barras" name="codigos_barras" rows="3"
+                          placeholder="Uno por línea">{{ old('codigos_barras') }}</textarea>
+                <div class="form-text">Opcional. Sirve para que el escaneo encuentre el producto con cualquiera de estos códigos.</div>
+                @error('codigos_barras')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
             
             <div class="row">
                 <div class="col-md-4 mb-3">

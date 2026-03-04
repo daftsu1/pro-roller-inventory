@@ -28,6 +28,20 @@
                         <td>{{ $producto->codigo }}</td>
                     </tr>
                     <tr>
+                        <th>Códigos alternativos:</th>
+                        <td>
+                            @if($producto->codigosBarras->count() > 0)
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach($producto->codigosBarras as $cb)
+                                        <span class="badge bg-info">{{ $cb->codigo }}</span>
+                                    @endforeach
+                                </div>
+                            @else
+                                -
+                            @endif
+                        </td>
+                    </tr>
+                    <tr>
                         <th>Nombre:</th>
                         <td>{{ $producto->nombre }}</td>
                     </tr>

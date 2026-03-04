@@ -225,6 +225,19 @@
                                 <h5>Total: $<span id="totalVenta">0</span></h5>
                             </div>
                         </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="tiene_instalacion" onchange="toggleMontoInstalacion(); actualizarDescuentoVenta();">
+                                    <label class="form-check-label" for="tiene_instalacion">Agregar costo de instalación a esta venta</label>
+                                </div>
+                                <div class="mt-2" id="wrap_monto_instalacion" style="display:none;">
+                                    <label for="monto_instalacion" class="form-label small">Monto instalación (CLP)</label>
+                                    <input type="number" class="form-control form-control-sm" id="monto_instalacion" min="0" value="0" step="0.01" placeholder="0" onchange="actualizarDescuentoVenta()" onblur="actualizarDescuentoVenta()">
+                                </div>
+                                <small class="text-muted">No mueve stock, solo suma al total.</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -347,6 +360,8 @@
 <script>
 let ventaActual = null;
 let ventaModal = null;
+// Monto por defecto de instalación (desde config)
+window.instalacionMontoDefault = {{ json_encode(config('ventas.instalacion_monto_default', 12500)) }};
 
 // Función helper para formatear precios en CLP
 function formatearCLP(valor) {
@@ -463,56 +478,72 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Autocompletado de productos
+    // Autocompletado de productos (búsqueda unificada por id / código (incluye variantes) / nombre)
     const productoBuscar = document.getElementById('producto_buscar');
     const productosLista = document.getElementById('productos_lista');
     const productoIdSeleccionado = document.getElementById('producto_id_seleccionado');
     const productoInfo = document.getElementById('producto_info');
+    let productosBusquedaActual = [];
     
     if (productoBuscar) {
         productoBuscar.addEventListener('input', function() {
-            const busqueda = this.value.toLowerCase().trim();
+            const busqueda = this.value.trim();
             
-            if (busqueda.length < 2) {
+            if (busqueda.length < 1) {
                 productosLista.style.display = 'none';
                 productoIdSeleccionado.value = '';
                 productoInfo.style.display = 'none';
                 return;
             }
-            
-            // Filtrar productos
-            const resultados = window.productosData.filter(p => 
-                p.nombre.toLowerCase().includes(busqueda) ||
-                p.codigo.toLowerCase().includes(busqueda)
-            ).slice(0, 10); // Limitar a 10 resultados
-            
-            if (resultados.length === 0) {
-                productosLista.innerHTML = '<div class="list-group-item text-muted">No se encontraron productos</div>';
-                productosLista.style.display = 'block';
-                return;
-            }
-            
-            // Mostrar resultados
-            let html = '';
-            resultados.forEach(producto => {
-                const nombreEscapado = producto.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                html += `
-                    <button type="button" 
-                            class="list-group-item list-group-item-action" 
-                            onclick="seleccionarProducto(${producto.id}, '${nombreEscapado}', ${producto.precio_venta}, ${producto.stock_actual}, '${producto.codigo}')">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <strong>${producto.nombre}</strong>
-                                <br>
-                                <small class="text-muted">Código: ${producto.codigo} | Stock: ${producto.stock_actual} | Precio: $${parseFloat(producto.precio_venta).toLocaleString('es-CL')}</small>
+
+            fetch(`{{ route('ventas.buscar-productos') }}?q=${encodeURIComponent(busqueda)}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    productosLista.innerHTML = '<div class="list-group-item text-muted">Error al buscar productos</div>';
+                    productosLista.style.display = 'block';
+                    return;
+                }
+
+                const resultados = data.productos || [];
+                productosBusquedaActual = resultados;
+
+                if (resultados.length === 0) {
+                    productosLista.innerHTML = '<div class="list-group-item text-muted">No se encontraron productos</div>';
+                    productosLista.style.display = 'block';
+                    return;
+                }
+
+                let html = '';
+                resultados.forEach(producto => {
+                    const nombreEscapado = (producto.nombre || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    html += `
+                        <button type="button" 
+                                class="list-group-item list-group-item-action" 
+                                onclick="seleccionarProducto(${producto.id}, '${nombreEscapado}', ${producto.precio_venta}, ${producto.stock_actual}, '${producto.codigo}')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${producto.nombre}</strong>
+                                    <br>
+                                    <small class="text-muted">Código: ${producto.codigo} | Stock: ${producto.stock_actual} | Precio: $${parseFloat(producto.precio_venta).toLocaleString('es-CL')}</small>
+                                </div>
                             </div>
-                        </div>
-                    </button>
-                `;
+                        </button>
+                    `;
+                });
+
+                productosLista.innerHTML = html;
+                productosLista.style.display = 'block';
+            })
+            .catch(() => {
+                productosLista.innerHTML = '<div class="list-group-item text-muted">Error al buscar productos</div>';
+                productosLista.style.display = 'block';
             });
-            
-            productosLista.innerHTML = html;
-            productosLista.style.display = 'block';
         });
         
         // Cerrar lista al hacer clic fuera
@@ -527,6 +558,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.key === 'Escape') {
                 productosLista.style.display = 'none';
                 this.blur();
+            } else if (e.key === 'Enter') {
+                // Si hay un único resultado, seleccionarlo automáticamente
+                if (productosBusquedaActual.length === 1) {
+                    const p = productosBusquedaActual[0];
+                    seleccionarProducto(p.id, p.nombre, p.precio_venta, p.stock_actual, p.codigo);
+                    e.preventDefault();
+                }
             }
         });
     }
@@ -598,8 +636,14 @@ function abrirVenta(ventaId) {
         
         document.getElementById('ventaId').value = ventaActual.id;
         document.getElementById('numeroFacturaModal').textContent = ventaActual.numero_factura;
-        // Asegurar que la fecha siempre tenga un valor (si está vacía, usar hoy)
-        const fechaVenta = ventaActual.fecha || new Date().toISOString().split('T')[0];
+        // Fecha: normalizar a Y-m-d y usar hoy por defecto si falta
+        const hoy = new Date().toISOString().split('T')[0];
+        let fechaVenta = ventaActual.fecha;
+        if (!fechaVenta) {
+            fechaVenta = hoy;
+        } else if (typeof fechaVenta === 'string' && fechaVenta.includes('T')) {
+            fechaVenta = fechaVenta.split('T')[0];
+        }
         document.getElementById('fecha_modal').value = fechaVenta;
         document.getElementById('cliente_nombre_modal').value = ventaActual.cliente_nombre || '';
         document.getElementById('cliente_documento_modal').value = ventaActual.cliente_documento || '';
@@ -634,6 +678,26 @@ function abrirVenta(ventaId) {
         document.getElementById('btnCancelarVenta').style.display = esCompletada ? 'inline-block' : 'none';
         document.getElementById('btnImprimirVenta').style.display = esCompletada ? 'inline-block' : 'none';
         
+        // Instalación: por defecto marcada y monto 12500 (o config). Si la venta ya tiene datos, respetarlos.
+        const defaultMonto = (typeof window.instalacionMontoDefault !== 'undefined' && window.instalacionMontoDefault != null) ? parseFloat(window.instalacionMontoDefault) : 12500;
+        const montoGuardado = ventaActual.monto_instalacion != null ? parseFloat(ventaActual.monto_instalacion) : 0;
+        const sinInstalacionDefinida = !ventaActual.tiene_instalacion && montoGuardado === 0;
+        const tieneInstalacion = ventaActual.tiene_instalacion || sinInstalacionDefinida;
+        const montoAMostrar = tieneInstalacion ? (montoGuardado > 0 ? montoGuardado : defaultMonto) : 0;
+        document.getElementById('tiene_instalacion').checked = tieneInstalacion;
+        document.getElementById('monto_instalacion').value = montoAMostrar.toFixed(2);
+        document.getElementById('tiene_instalacion').disabled = !esPendiente;
+        toggleMontoInstalacion();
+        if (esPendiente) {
+            document.getElementById('monto_instalacion').disabled = !tieneInstalacion;
+        } else {
+            document.getElementById('monto_instalacion').disabled = true;
+        }
+        // Si aplicamos instalación por defecto, guardar en el backend para que el total se actualice
+        if (sinInstalacionDefinida && esPendiente) {
+            actualizarDescuentoVenta();
+        }
+
         actualizarTablaProductosDesdeVenta(ventaActual);
         ventaModal.show();
     })
@@ -641,6 +705,14 @@ function abrirVenta(ventaId) {
         console.error('Error:', error);
         alert('Error al cargar la venta');
     });
+}
+
+function toggleMontoInstalacion() {
+    const tiene = document.getElementById('tiene_instalacion').checked;
+    const wrap = document.getElementById('wrap_monto_instalacion');
+    const input = document.getElementById('monto_instalacion');
+    wrap.style.display = tiene ? 'block' : 'none';
+    input.disabled = !tiene || (ventaActual && ventaActual.estado !== 'pendiente');
 }
 
 // Guardar datos de la venta (fecha, cliente)
@@ -680,6 +752,10 @@ function guardarDatosVenta() {
     }
     formData.append('cliente_nombre', clienteNombre);
     formData.append('cliente_documento', clienteDocumento);
+    formData.append('tiene_instalacion', document.getElementById('tiene_instalacion').checked ? '1' : '0');
+    formData.append('monto_instalacion', document.getElementById('monto_instalacion').value || '0');
+    formData.append('descuento_porcentaje', document.getElementById('descuento_porcentaje_venta').value || '0');
+    formData.append('descuento_monto', document.getElementById('descuento_monto_venta').value || '0');
     formData.append('_method', 'PUT');
     
     fetch(`/ventas/${ventaActual.id}/actualizar`, {
@@ -699,9 +775,12 @@ function guardarDatosVenta() {
     .then(data => {
         if (data.success) {
             ventaActual = data.venta;
-            // Actualizar los campos en el modal con los nuevos valores (por si acaso)
             document.getElementById('cliente_nombre_modal').value = ventaActual.cliente_nombre || '';
             document.getElementById('cliente_documento_modal').value = ventaActual.cliente_documento || '';
+            if (data.total != null) {
+                const totalNum = typeof data.total === 'string' ? parseFloat(data.total.replace(/,/g, '')) : parseFloat(data.total);
+                document.getElementById('totalVenta').textContent = (isNaN(totalNum) ? 0 : totalNum).toLocaleString('es-CL');
+            }
         } else {
             console.error('Error al guardar:', data);
             alert('Error al guardar: ' + (data.message || 'Error desconocido'));
@@ -924,7 +1003,8 @@ function actualizarTablaProductosDesdeVenta(venta) {
         const bsCollapse = new bootstrap.Collapse(descuentosCollapse, { show: true });
     }
     
-    document.getElementById('totalVenta').textContent = parseFloat(venta.total).toLocaleString('es-CL');
+    const totalVal = typeof venta.total === 'string' ? parseFloat(venta.total.replace(/,/g, '')) : parseFloat(venta.total);
+    document.getElementById('totalVenta').textContent = (isNaN(totalVal) ? 0 : totalVal).toLocaleString('es-CL');
 }
 
 // Actualizar descuento sobre el total de la venta
@@ -934,13 +1014,17 @@ function actualizarDescuentoVenta() {
     const descuentoPorcentaje = parseFloat(document.getElementById('descuento_porcentaje_venta').value) || 0;
     const descuentoMonto = parseFloat(document.getElementById('descuento_monto_venta').value) || 0;
     
+    const tieneInstalacion = document.getElementById('tiene_instalacion').checked;
+    const montoInstalacion = document.getElementById('monto_instalacion').value;
     const updateData = {
         fecha: document.getElementById('fecha_modal').value,
         cliente_id: document.getElementById('cliente_id_modal').value || null,
         cliente_nombre: document.getElementById('cliente_nombre_modal').value || null,
         cliente_documento: document.getElementById('cliente_documento_modal').value || null,
         descuento_porcentaje: descuentoPorcentaje,
-        descuento_monto: descuentoMonto
+        descuento_monto: descuentoMonto,
+        tiene_instalacion: tieneInstalacion,
+        monto_instalacion: tieneInstalacion ? (montoInstalacion !== '' ? parseFloat(montoInstalacion) : null) : 0
     };
     
     fetch(`/ventas/${ventaActual.id}/actualizar`, {
@@ -957,9 +1041,11 @@ function actualizarDescuentoVenta() {
     .then(data => {
         if (data.success) {
             ventaActual = data.venta;
-            // Formatear total con formato CLP chileno
-            const totalNum = typeof data.total === 'string' ? parseFloat(data.total.replace(/[^\d,.-]/g, '').replace(',', '.')) : parseFloat(data.total);
-            document.getElementById('totalVenta').textContent = totalNum.toLocaleString('es-CL');
+            const totalNum = typeof data.total === 'string' ? parseFloat(data.total.replace(/,/g, '')) : parseFloat(data.total);
+            document.getElementById('totalVenta').textContent = (isNaN(totalNum) ? 0 : totalNum).toLocaleString('es-CL');
+            if (ventaActual.monto_instalacion != null) {
+                document.getElementById('monto_instalacion').value = parseFloat(ventaActual.monto_instalacion).toFixed(2);
+            }
         } else {
             alert('Error al actualizar el descuento: ' + (data.message || 'Error desconocido'));
         }

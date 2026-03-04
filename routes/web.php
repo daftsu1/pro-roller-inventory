@@ -38,6 +38,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('proveedores', ProveedorController::class);
     
     // Ventas
+    Route::get('ventas/buscar-productos', [VentaController::class, 'buscarProductos'])->name('ventas.buscar-productos');
     Route::resource('ventas', VentaController::class)->except(['edit', 'update', 'store']);
     Route::get('ventas/{venta}/editar', [VentaController::class, 'editar'])->name('ventas.editar');
     Route::post('ventas/{venta}/completar', [VentaController::class, 'completar'])->name('ventas.completar');

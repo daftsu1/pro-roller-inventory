@@ -145,3 +145,30 @@ Sustituye `/ruta/a/pro-roller-inventory` por la ruta real en tu servidor (por ej
    ```
 
 4. **Probar solo HTTP (puerto 80):** `http://TU_IP` — si eso va y HTTPS no, el fallo es el certificado.
+
+---
+
+## Adminer en el puerto 8081: "conexión rechazada"
+
+Adminer va en **http://TU_IP:8081**. Si el navegador dice *conexión rechazada*:
+
+1. **Comprobar que el contenedor escucha en 8081:**
+   ```bash
+   docker ps --format "table {{.Names}}\t{{.Ports}}" | grep adminer
+   ```
+   Debe salir algo como `0.0.0.0:8081->8080/tcp`.
+
+2. **Probar desde el propio servidor:**
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8081
+   ```
+   Si devuelve `200`, el servicio va; el fallo es el **firewall**.
+
+3. **Abrir el puerto 8081 en el firewall (ej. UFW):**
+   ```bash
+   sudo ufw allow 8081/tcp
+   sudo ufw reload
+   sudo ufw status
+   ```
+
+4. Si el VPS usa **reglas del proveedor** (OVH, Hetzner, etc.), en el panel de control abre también el puerto **TCP 8081** en el firewall / grupo de seguridad.

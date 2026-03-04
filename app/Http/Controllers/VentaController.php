@@ -74,7 +74,7 @@ class VentaController extends Controller
         
         $venta = Venta::create([
             'numero_factura' => $numeroFactura,
-            'fecha' => now(),
+            'fecha' => today(),
             'total' => 0,
             'usuario_id' => auth()->id(),
             'estado' => 'pendiente',
@@ -99,6 +99,29 @@ class VentaController extends Controller
         return response()->json([
             'venta' => $venta,
             'productos' => $productos
+        ]);
+    }
+
+    public function buscarProductos(Request $request)
+    {
+        $termino = (string) $request->get('q', '');
+
+        if (trim($termino) === '') {
+            return response()->json([
+                'success' => true,
+                'productos' => [],
+            ]);
+        }
+
+        $productos = Producto::buscarParaVenta($termino)
+            ->select('id', 'codigo', 'nombre', 'precio_venta', 'stock_actual')
+            ->orderBy('nombre')
+            ->limit(10)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'productos' => $productos,
         ]);
     }
 
@@ -250,6 +273,8 @@ class VentaController extends Controller
             'cliente_documento' => 'nullable|string|max:50',
             'descuento_porcentaje' => 'nullable|numeric|min:0|max:100',
             'descuento_monto' => 'nullable|numeric|min:0',
+            'tiene_instalacion' => 'nullable|boolean',
+            'monto_instalacion' => 'nullable|numeric|min:0',
         ]);
 
         // Si hay cliente_id, usarlo y mantener compatibilidad con campos manuales
@@ -272,9 +297,19 @@ class VentaController extends Controller
             $updateData['descuento_monto'] = $validated['descuento_monto'];
         }
 
+        // Instalación: si no tiene instalación, monto = 0; si tiene y monto vacío, usar valor por defecto
+        $tieneInstalacion = filter_var($validated['tiene_instalacion'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $updateData['tiene_instalacion'] = $tieneInstalacion;
+        if (!$tieneInstalacion) {
+            $updateData['monto_instalacion'] = 0;
+        } else {
+            $monto = $validated['monto_instalacion'] ?? null;
+            $updateData['monto_instalacion'] = $monto !== null && $monto !== '' ? (float) $monto : config('ventas.instalacion_monto_default', 0);
+        }
+
         $venta->update($updateData);
 
-        // Recalcular total con los nuevos descuentos
+        // Recalcular total con los nuevos descuentos e instalación
         $total = $venta->fresh()->calcularTotalConDescuentos();
         $venta->update(['total' => $total]);
 

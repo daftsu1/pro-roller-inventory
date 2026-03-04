@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CodigoBarras;
 use App\Models\Producto;
 use App\Models\Categoria;
 use App\Models\Proveedor;
@@ -66,37 +67,48 @@ class ProductoController extends Controller
             'categoria_id' => 'nullable|exists:categorias,id',
             'proveedor_id' => 'nullable|exists:proveedores,id',
             'activo' => 'boolean',
+            'codigos_barras' => 'nullable|string',
         ]);
 
-        return DB::transaction(function () use ($validated) {
-            // Crear el producto
-            $producto = Producto::create($validated);
+        try {
+            return DB::transaction(function () use ($validated) {
+                // Crear el producto
+                $producto = Producto::create($validated);
 
-            // Si hay stock inicial, crear movimiento de entrada
-            if ($validated['stock_actual'] > 0) {
-                MovimientoInventario::create([
-                    'producto_id' => $producto->id,
-                    'tipo' => 'entrada',
-                    'cantidad' => $validated['stock_actual'],
-                    'motivo' => "Stock inicial - Producto: {$producto->nombre}",
-                    'usuario_id' => auth()->id(),
-                    'fecha' => now(),
-                ]);
-            }
+                $this->sincronizarCodigosBarras($producto, $validated['codigos_barras'] ?? null);
 
-            return redirect()->route('productos.index')
-                ->with('success', 'Producto creado exitosamente.' . ($validated['stock_actual'] > 0 ? ' Se registró el stock inicial como movimiento de entrada.' : ''));
-        });
+                // Si hay stock inicial, crear movimiento de entrada
+                if ($validated['stock_actual'] > 0) {
+                    MovimientoInventario::create([
+                        'producto_id' => $producto->id,
+                        'tipo' => 'entrada',
+                        'cantidad' => $validated['stock_actual'],
+                        'motivo' => "Stock inicial - Producto: {$producto->nombre}",
+                        'usuario_id' => auth()->id(),
+                        'fecha' => now(),
+                    ]);
+                }
+
+                return redirect()->route('productos.index')
+                    ->with('success', 'Producto creado exitosamente.' . ($validated['stock_actual'] > 0 ? ' Se registró el stock inicial como movimiento de entrada.' : ''));
+            });
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['codigos_barras' => $e->getMessage()])
+                ->with('error', $e->getMessage());
+        }
     }
 
     public function show(Producto $producto)
     {
-        $producto->load('categoria', 'proveedor', 'movimientos.producto', 'detallesVenta.venta');
+        $producto->load('categoria', 'proveedor', 'codigosBarras', 'movimientos.producto', 'detallesVenta.venta');
         return view('productos.show', compact('producto'));
     }
 
     public function edit(Producto $producto)
     {
+        $producto->load('codigosBarras');
         $categorias = Categoria::all();
         $proveedores = Proveedor::all();
         return view('productos.edit', compact('producto', 'categorias', 'proveedores'));
@@ -115,9 +127,11 @@ class ProductoController extends Controller
             'categoria_id' => 'nullable|exists:categorias,id',
             'proveedor_id' => 'nullable|exists:proveedores,id',
             'activo' => 'boolean',
+            'codigos_barras' => 'nullable|string',
         ]);
 
-        return DB::transaction(function () use ($producto, $validated) {
+        try {
+            return DB::transaction(function () use ($producto, $validated) {
             // Guardar stock anterior
             $stockAnterior = $producto->stock_actual;
             $stockNuevo = $validated['stock_actual'];
@@ -125,6 +139,8 @@ class ProductoController extends Controller
 
             // Actualizar producto
             $producto->update($validated);
+
+            $this->sincronizarCodigosBarras($producto, $validated['codigos_barras'] ?? null);
 
             // Si hay diferencia en el stock, crear movimiento de inventario
             if ($diferencia != 0) {
@@ -145,7 +161,13 @@ class ProductoController extends Controller
 
             return redirect()->route('productos.index')
                 ->with('success', 'Producto actualizado exitosamente.' . ($diferencia != 0 ? ' Se registró un movimiento de inventario.' : ''));
-        });
+            });
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['codigos_barras' => $e->getMessage()])
+                ->with('error', $e->getMessage());
+        }
     }
 
     public function destroy(Producto $producto)
@@ -160,5 +182,64 @@ class ProductoController extends Controller
 
         return redirect()->route('productos.index')
             ->with('success', 'Producto eliminado exitosamente.');
+    }
+
+    private function sincronizarCodigosBarras(Producto $producto, ?string $rawCodigos): void
+    {
+        $codigos = collect(preg_split("/\r\n|\n|\r/", (string) $rawCodigos))
+            ->map(fn ($c) => trim((string) $c))
+            ->filter(fn ($c) => $c !== '')
+            ->values();
+
+        if ($codigos->isEmpty()) {
+            $producto->codigosBarras()->delete();
+            return;
+        }
+
+        // Validaciones simples
+        foreach ($codigos as $c) {
+            if (mb_strlen($c) > 50) {
+                throw new \InvalidArgumentException("El código '{$c}' supera el máximo de 50 caracteres.");
+            }
+        }
+
+        $duplicadosEnFormulario = $codigos->duplicates()->values()->all();
+        if (!empty($duplicadosEnFormulario)) {
+            throw new \InvalidArgumentException('Hay códigos repetidos en la lista: ' . implode(', ', $duplicadosEnFormulario));
+        }
+
+        // No permitir usar el código principal del mismo producto como variante
+        if ($codigos->contains($producto->codigo)) {
+            throw new \InvalidArgumentException("El código '{$producto->codigo}' ya es el código principal del producto. No lo repita como variante.");
+        }
+
+        // Conflicto con códigos principales de otros productos
+        $conflictoProducto = Producto::query()
+            ->whereIn('codigo', $codigos->all())
+            ->where('id', '!=', $producto->id)
+            ->select('id', 'codigo', 'nombre')
+            ->first();
+
+        if ($conflictoProducto) {
+            throw new \InvalidArgumentException("El código '{$conflictoProducto->codigo}' ya está asignado al producto '{$conflictoProducto->nombre}'. Revise el producto y decida si lo cambia.");
+        }
+
+        // Conflicto con variantes existentes de otros productos
+        $conflictoVariante = CodigoBarras::query()
+            ->whereIn('codigo', $codigos->all())
+            ->where('producto_id', '!=', $producto->id)
+            ->with(['producto:id,nombre,codigo'])
+            ->first();
+
+        if ($conflictoVariante && $conflictoVariante->producto) {
+            $p = $conflictoVariante->producto;
+            throw new \InvalidArgumentException("El código '{$conflictoVariante->codigo}' ya está asignado al producto '{$p->nombre}'. Revise el producto y decida si lo cambia.");
+        }
+
+        // Reemplazar lista completa (simple y consistente)
+        $producto->codigosBarras()->delete();
+        foreach ($codigos as $c) {
+            $producto->codigosBarras()->create(['codigo' => $c]);
+        }
     }
 }

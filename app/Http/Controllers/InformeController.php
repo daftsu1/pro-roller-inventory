@@ -37,6 +37,11 @@ class InformeController extends Controller
         $cantidadVentas = $ventas->count();
         $promedioVenta = $cantidadVentas > 0 ? $totalVentas / $cantidadVentas : 0;
 
+        // Ingresos por instalación
+        $totalInstalacion = $ventas->sum('monto_instalacion');
+        $cantidadVentasConInstalacion = $ventas->where('tiene_instalacion', true)->count();
+        $porcentajeVentasConInstalacion = $cantidadVentas > 0 ? round(($cantidadVentasConInstalacion / $cantidadVentas) * 100, 1) : 0;
+
         // Ventas por día (para gráfico)
         $ventasPorDia = Venta::where('estado', 'completada')
             ->whereBetween('fecha', [$fechaInicio, $fechaFin])
@@ -52,6 +57,9 @@ class InformeController extends Controller
             'totalVentas',
             'cantidadVentas',
             'promedioVenta',
+            'totalInstalacion',
+            'cantidadVentasConInstalacion',
+            'porcentajeVentasConInstalacion',
             'ventasPorDia'
         ));
     }
@@ -143,6 +151,19 @@ class InformeController extends Controller
             ')
             ->first();
 
+        // Ingresos por instalación (mismo período)
+        $instalacionStats = Venta::where('estado', 'completada')
+            ->whereBetween('fecha', [$fechaInicio, $fechaFin])
+            ->selectRaw('
+                COALESCE(SUM(monto_instalacion), 0) as total_instalacion,
+                SUM(CASE WHEN tiene_instalacion = 1 THEN 1 ELSE 0 END) as ventas_con_instalacion
+            ')
+            ->first();
+        $totalInstalacion = (float) ($instalacionStats->total_instalacion ?? 0);
+        $cantidadVentasConInstalacion = (int) ($instalacionStats->ventas_con_instalacion ?? 0);
+        $totalVentasResumen = (int) ($resumenVentas->total_ventas ?? 0);
+        $porcentajeVentasConInstalacion = $totalVentasResumen > 0 ? round(($cantidadVentasConInstalacion / $totalVentasResumen) * 100, 1) : 0;
+
         // Resumen de productos
         $totalProductos = Producto::where('activo', true)->count();
         $productosBajoStock = Producto::whereColumn('stock_actual', '<=', 'stock_minimo')
@@ -178,6 +199,9 @@ class InformeController extends Controller
             'totalClientes',
             'clientesConVentas',
             'topProductos',
+            'totalInstalacion',
+            'cantidadVentasConInstalacion',
+            'porcentajeVentasConInstalacion',
             'fechaInicio',
             'fechaFin'
         ));

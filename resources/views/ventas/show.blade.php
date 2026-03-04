@@ -76,8 +76,14 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-2">
                     <span>Subtotal:</span>
-                    <span>${{ number_format($venta->total, 0, ',', '.') }}</span>
+                    <span>${{ number_format($venta->subtotalSinInstalacion(), 0, ',', '.') }}</span>
                 </div>
+                @if($venta->tiene_instalacion && $venta->monto_instalacion > 0)
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Instalación:</span>
+                    <span>${{ number_format($venta->monto_instalacion, 0, ',', '.') }}</span>
+                </div>
+                @endif
                 <hr>
                 <div class="d-flex justify-content-between">
                     <strong>Total:</strong>
@@ -115,6 +121,12 @@
                     @endforeach
                 </tbody>
                 <tfoot>
+                    @if($venta->tiene_instalacion && $venta->monto_instalacion > 0)
+                    <tr>
+                        <td colspan="3" class="text-end">Instalación</td>
+                        <td>${{ number_format($venta->monto_instalacion, 0, ',', '.') }}</td>
+                    </tr>
+                    @endif
                     <tr>
                         <th colspan="3" class="text-end">Total:</th>
                         <th>${{ number_format($venta->total, 0, ',', '.') }}</th>

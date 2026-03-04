@@ -1,4 +1,4 @@
-mmmh #!/bin/sh
+#!/bin/sh
 # Deploy pro-roller-inventory en VPS
 # Siempre: pull, build app/worker, recrear solo app y worker.
 # DB y Redis no se recrean (sus datos están en volúmenes; recrearlos no borra datos, pero evitas tocarlos).
@@ -15,5 +15,8 @@ docker compose -f docker-compose.production.yml build --no-cache app worker
 
 echo ">>> Recrear solo app y worker (db y redis siguen; sus datos están en volúmenes)..."
 docker compose -f docker-compose.production.yml up -d --force-recreate app worker
+
+echo ">>> Migraciones (solo pendientes; no borra datos)..."
+docker compose -f docker-compose.production.yml exec -T app php artisan migrate --force
 
 echo ">>> Listo."
