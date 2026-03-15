@@ -204,7 +204,31 @@
                         <div id="productosContainer">
                             <p class="text-muted mb-0">No hay productos agregados</p>
                         </div>
-                        
+
+                        <!-- Instalación -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="tiene_instalacion" onchange="toggleMontoInstalacion(); actualizarDescuentoVenta();">
+                                    <label class="form-check-label" for="tiene_instalacion">Agregar costo de instalación a esta venta</label>
+                                </div>
+                                <div class="mt-2" id="wrap_monto_instalacion" style="display:none;">
+                                    <div class="row g-2">
+                                        <div class="col-md-4 col-6">
+                                            <label for="cantidad_instalacion" class="form-label small">Cantidad</label>
+                                            <input type="number" class="form-control form-control-sm" id="cantidad_instalacion" min="1" value="1" onchange="actualizarMontoInstalacionPorCantidad()" onblur="actualizarMontoInstalacionPorCantidad()">
+                                        </div>
+                                        <div class="col-md-8 col-6">
+                                            <label for="monto_instalacion" class="form-label small">Monto instalación (CLP)</label>
+                                            <input type="number" class="form-control form-control-sm" id="monto_instalacion" min="0" value="0" step="0.01" placeholder="0" onchange="actualizarMontoInstalacionDesdeMonto()" onblur="actualizarMontoInstalacionDesdeMonto()">
+                                        </div>
+                                    </div>
+                                </div>
+                                <small class="text-muted">No mueve stock, solo suma al total.</small>
+                            </div>
+                        </div>
+
+                        <!-- Descuento y total -->
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <button class="btn btn-link p-0 text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#descuentosCollapse" aria-expanded="false" aria-controls="descuentosCollapse" id="btnToggleDescuentos">
@@ -222,20 +246,7 @@
                                 </div>
                             </div>
                             <div class="col-md-6 d-flex justify-content-end align-items-end">
-                                <h5>Total: $<span id="totalVenta">0</span></h5>
-                            </div>
-                        </div>
-                        <div class="row mt-2">
-                            <div class="col-12">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="tiene_instalacion" onchange="toggleMontoInstalacion(); actualizarDescuentoVenta();">
-                                    <label class="form-check-label" for="tiene_instalacion">Agregar costo de instalación a esta venta</label>
-                                </div>
-                                <div class="mt-2" id="wrap_monto_instalacion" style="display:none;">
-                                    <label for="monto_instalacion" class="form-label small">Monto instalación (CLP)</label>
-                                    <input type="number" class="form-control form-control-sm" id="monto_instalacion" min="0" value="0" step="0.01" placeholder="0" onchange="actualizarDescuentoVenta()" onblur="actualizarDescuentoVenta()">
-                                </div>
-                                <small class="text-muted">No mueve stock, solo suma al total.</small>
+                                <h5 class="mb-0">Total: $<span id="totalVenta">0</span></h5>
                             </div>
                         </div>
                     </div>
@@ -679,13 +690,19 @@ function abrirVenta(ventaId) {
         document.getElementById('btnImprimirVenta').style.display = esCompletada ? 'inline-block' : 'none';
         
         // Instalación: por defecto marcada y monto 12500 (o config). Si la venta ya tiene datos, respetarlos.
-        const defaultMonto = (typeof window.instalacionMontoDefault !== 'undefined' && window.instalacionMontoDefault != null) ? parseFloat(window.instalacionMontoDefault) : 12500;
+        const defaultMonto = obtenerMontoInstalacionUnitario();
         const montoGuardado = ventaActual.monto_instalacion != null ? parseFloat(ventaActual.monto_instalacion) : 0;
         const sinInstalacionDefinida = !ventaActual.tiene_instalacion && montoGuardado === 0;
         const tieneInstalacion = ventaActual.tiene_instalacion || sinInstalacionDefinida;
         const montoAMostrar = tieneInstalacion ? (montoGuardado > 0 ? montoGuardado : defaultMonto) : 0;
         document.getElementById('tiene_instalacion').checked = tieneInstalacion;
         document.getElementById('monto_instalacion').value = montoAMostrar.toFixed(2);
+        // Calcular una cantidad aproximada a partir del monto mostrado y el valor unitario
+        let cantidadCalc = 1;
+        if (tieneInstalacion && defaultMonto > 0 && montoAMostrar > 0) {
+            cantidadCalc = Math.max(1, Math.round(montoAMostrar / defaultMonto));
+        }
+        document.getElementById('cantidad_instalacion').value = cantidadCalc;
         document.getElementById('tiene_instalacion').disabled = !esPendiente;
         toggleMontoInstalacion();
         if (esPendiente) {
@@ -710,9 +727,53 @@ function abrirVenta(ventaId) {
 function toggleMontoInstalacion() {
     const tiene = document.getElementById('tiene_instalacion').checked;
     const wrap = document.getElementById('wrap_monto_instalacion');
-    const input = document.getElementById('monto_instalacion');
+    const inputMonto = document.getElementById('monto_instalacion');
+    const inputCantidad = document.getElementById('cantidad_instalacion');
     wrap.style.display = tiene ? 'block' : 'none';
-    input.disabled = !tiene || (ventaActual && ventaActual.estado !== 'pendiente');
+    const disabled = !tiene || (ventaActual && ventaActual.estado !== 'pendiente');
+    inputMonto.disabled = disabled;
+    inputCantidad.disabled = disabled;
+}
+
+function obtenerMontoInstalacionUnitario() {
+    const def = (typeof window.instalacionMontoDefault !== 'undefined' && window.instalacionMontoDefault != null)
+        ? parseFloat(window.instalacionMontoDefault)
+        : 12500;
+    return isNaN(def) || def <= 0 ? 12500 : def;
+}
+
+function actualizarMontoInstalacionPorCantidad() {
+    const tiene = document.getElementById('tiene_instalacion').checked;
+    if (!tiene) {
+        return;
+    }
+    let cantidad = parseInt(document.getElementById('cantidad_instalacion').value, 10);
+    if (!cantidad || cantidad < 1) {
+        cantidad = 1;
+        document.getElementById('cantidad_instalacion').value = 1;
+    }
+    const unitario = obtenerMontoInstalacionUnitario();
+    const monto = unitario * cantidad;
+    document.getElementById('monto_instalacion').value = monto.toFixed(2);
+    actualizarDescuentoVenta();
+}
+
+function actualizarMontoInstalacionDesdeMonto() {
+    const tiene = document.getElementById('tiene_instalacion').checked;
+    if (!tiene) {
+        return;
+    }
+    let monto = parseFloat(document.getElementById('monto_instalacion').value);
+    if (isNaN(monto) || monto < 0) {
+        monto = 0;
+        document.getElementById('monto_instalacion').value = '0.00';
+    }
+    const unitario = obtenerMontoInstalacionUnitario();
+    if (unitario > 0 && monto > 0) {
+        const cantidad = Math.max(1, Math.round(monto / unitario));
+        document.getElementById('cantidad_instalacion').value = cantidad;
+    }
+    actualizarDescuentoVenta();
 }
 
 // Guardar datos de la venta (fecha, cliente)
