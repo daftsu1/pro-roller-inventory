@@ -61,6 +61,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('informes/ventas', [InformeController::class, 'ventas'])->name('informes.ventas');
     Route::get('informes/productos-vendidos', [InformeController::class, 'productosVendidos'])->name('informes.productos-vendidos');
     Route::get('informes/stock-bajo', [InformeController::class, 'stockBajo'])->name('informes.stock-bajo');
+    Route::get('informes/stock-bajo/exportar-csv', [InformeController::class, 'exportarStockBajoCsv'])->name('informes.stock-bajo.exportar-csv');
     Route::get('informes/clientes', [InformeController::class, 'clientes'])->name('informes.clientes');
     Route::get('informes/resumen', [InformeController::class, 'resumen'])->name('informes.resumen');
     

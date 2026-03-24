@@ -3,12 +3,42 @@
 @section('title', 'Productos con Stock Bajo')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-exclamation-triangle"></i> Productos con Stock Bajo</h2>
-    <a href="{{ route('informes.index') }}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Volver
-    </a>
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-4">
+    <h2 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Productos con Stock Bajo</h2>
+    <div class="d-flex flex-wrap gap-2">
+        @if($productosBajoStock->isNotEmpty())
+            <a href="{{ route('informes.stock-bajo.exportar-csv', array_filter(['proveedor_id' => $proveedorFiltroId])) }}" class="btn btn-outline-primary">
+                <i class="bi bi-download"></i> Exportar CSV
+            </a>
+        @endif
+        <a href="{{ route('informes.index') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
 </div>
+
+<form method="GET" action="{{ route('informes.stock-bajo') }}" class="card mb-4">
+    <div class="card-body py-3">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-6 col-lg-4">
+                <label for="proveedor_id" class="form-label mb-1">Proveedor</label>
+                <select name="proveedor_id" id="proveedor_id" class="form-select">
+                    <option value="">Todos los proveedores</option>
+                    @foreach($proveedores as $proveedor)
+                        <option value="{{ $proveedor->id }}" {{ (string) $proveedorFiltroId === (string) $proveedor->id ? 'selected' : '' }}>
+                            {{ $proveedor->nombre }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-auto">
+                <button type="submit" class="btn btn-secondary">
+                    <i class="bi bi-funnel"></i> Filtrar
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
 
 <!-- Resumen -->
 <div class="row mb-4">
@@ -68,9 +98,15 @@
                     @empty
                     <tr>
                         <td colspan="7" class="text-center text-muted">
-                            <i class="bi bi-check-circle text-success fs-1"></i><br>
-                            <strong>¡Excelente!</strong><br>
-                            No hay productos con stock bajo en este momento
+                            @if($proveedorFiltroId)
+                                <i class="bi bi-inbox fs-1"></i><br>
+                                <strong>Sin resultados</strong><br>
+                                No hay productos con stock bajo para el proveedor seleccionado.
+                            @else
+                                <i class="bi bi-check-circle text-success fs-1"></i><br>
+                                <strong>¡Excelente!</strong><br>
+                                No hay productos con stock bajo en este momento
+                            @endif
                         </td>
                     </tr>
                     @endforelse

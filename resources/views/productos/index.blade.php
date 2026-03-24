@@ -46,6 +46,15 @@
                 </div>
             </div>
         </form>
+        @if(request('stock_bajo'))
+            <hr class="my-3">
+            <p class="mb-0 small text-muted">
+                <i class="bi bi-info-circle"></i>
+                Aquí el listado puede incluir productos inactivos. Para el informe oficial (solo activos), filtro por proveedor y
+                <strong>exportar CSV</strong>, usá
+                <a href="{{ route('informes.stock-bajo') }}">el informe de stock bajo</a>.
+            </p>
+        @endif
     </div>
 </div>
 

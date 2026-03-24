@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Venta;
 use App\Models\Producto;
+use App\Models\Proveedor;
 use App\Models\Cliente;
 use App\Models\DetalleVenta;
 use App\Models\MovimientoInventario;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -92,15 +94,75 @@ class InformeController extends Controller
         ));
     }
 
-    public function stockBajo()
+    public function stockBajo(Request $request)
     {
-        $productosBajoStock = Producto::with('categoria', 'proveedor')
+        $proveedorFiltroId = $this->resolveProveedorIdFiltro($request);
+        $productosBajoStock = $this->queryProductosBajoStock($proveedorFiltroId)->get();
+        $proveedores = Proveedor::orderBy('nombre')->get();
+
+        return view('informes.stock-bajo', compact('productosBajoStock', 'proveedores', 'proveedorFiltroId'));
+    }
+
+    public function exportarStockBajoCsv(Request $request)
+    {
+        $proveedorFiltroId = $this->resolveProveedorIdFiltro($request);
+        $productos = $this->queryProductosBajoStock($proveedorFiltroId)->get();
+
+        if ($productos->isEmpty()) {
+            return redirect()
+                ->route('informes.stock-bajo', array_filter(['proveedor_id' => $proveedorFiltroId]))
+                ->with('warning', 'No hay productos para exportar con el filtro seleccionado.');
+        }
+
+        $filename = 'stock-bajo-' . now()->format('Y-m-d');
+        if ($proveedorFiltroId !== null) {
+            $filename .= '-proveedor-' . $proveedorFiltroId;
+        }
+        $filename .= '.csv';
+
+        return response()->streamDownload(function () use ($productos) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($handle, ['id', 'nombre', 'stock actual', 'stock mínimo', 'proveedor']);
+            foreach ($productos as $producto) {
+                fputcsv($handle, [
+                    $producto->id,
+                    $producto->nombre,
+                    $producto->stock_actual,
+                    $producto->stock_minimo,
+                    $producto->proveedor->nombre ?? '',
+                ]);
+            }
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    private function resolveProveedorIdFiltro(Request $request): ?int
+    {
+        if (! $request->filled('proveedor_id')) {
+            return null;
+        }
+
+        $id = (int) $request->input('proveedor_id');
+
+        return Proveedor::whereKey($id)->exists() ? $id : null;
+    }
+
+    private function queryProductosBajoStock(?int $proveedorId): Builder
+    {
+        $query = Producto::query()
+            ->with(['categoria', 'proveedor'])
             ->whereColumn('stock_actual', '<=', 'stock_minimo')
             ->where('activo', true)
-            ->orderByRaw('(stock_actual - stock_minimo) ASC')
-            ->get();
+            ->orderByRaw('(stock_actual - stock_minimo) ASC');
 
-        return view('informes.stock-bajo', compact('productosBajoStock'));
+        if ($proveedorId !== null) {
+            $query->where('proveedor_id', $proveedorId);
+        }
+
+        return $query;
     }
 
     public function clientes(Request $request)
