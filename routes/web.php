@@ -25,8 +25,10 @@ Route::get('/', function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
-    // Productos
-    Route::resource('productos', ProductoController::class);
+    // Productos (sin borrado físico: basurero = desactivar)
+    Route::post('productos/{producto}/desactivar', [ProductoController::class, 'desactivar'])->name('productos.desactivar');
+    Route::post('productos/{producto}/reactivar', [ProductoController::class, 'reactivar'])->name('productos.reactivar');
+    Route::resource('productos', ProductoController::class)->except(['destroy']);
     
     // Categorías
     Route::resource('categorias', CategoriaController::class);

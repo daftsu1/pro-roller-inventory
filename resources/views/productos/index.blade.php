@@ -103,13 +103,21 @@
                                 <a href="{{ route('productos.edit', $producto) }}" class="btn btn-outline-primary">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <form action="{{ route('productos.destroy', $producto) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Estás seguro de eliminar este producto?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-outline-danger">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
+                                @if($producto->activo)
+                                    <form action="{{ route('productos.desactivar', $producto) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Desactivar este producto? Dejará de mostrarse en ventas nuevas; no se borra el historial.')">
+                                        @csrf
+                                        <button type="submit" class="btn btn-outline-danger" title="Desactivar producto">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                @else
+                                    <form action="{{ route('productos.reactivar', $producto) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Reactivar este producto? Volverá a mostrarse en ventas.')">
+                                        @csrf
+                                        <button type="submit" class="btn btn-outline-success" title="Reactivar producto">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </button>
+                                    </form>
+                                @endif
                             </div>
                         </td>
                     </tr>

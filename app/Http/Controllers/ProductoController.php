@@ -170,18 +170,30 @@ class ProductoController extends Controller
         }
     }
 
-    public function destroy(Producto $producto)
+    public function desactivar(Producto $producto)
     {
-        // Verificar si tiene ventas o movimientos
-        if ($producto->detallesVenta()->exists() || $producto->movimientos()->exists()) {
+        if (! $producto->activo) {
             return redirect()->route('productos.index')
-                ->with('error', 'No se puede eliminar el producto porque tiene registros asociados.');
+                ->with('warning', 'El producto ya estaba inactivo.');
         }
 
-        $producto->delete();
+        $producto->update(['activo' => false]);
 
         return redirect()->route('productos.index')
-            ->with('success', 'Producto eliminado exitosamente.');
+            ->with('success', 'Producto desactivado. No aparecerá en ventas nuevas; el historial se conserva.');
+    }
+
+    public function reactivar(Producto $producto)
+    {
+        if ($producto->activo) {
+            return redirect()->route('productos.index')
+                ->with('warning', 'El producto ya estaba activo.');
+        }
+
+        $producto->update(['activo' => true]);
+
+        return redirect()->route('productos.index')
+            ->with('success', 'Producto reactivado.');
     }
 
     private function sincronizarCodigosBarras(Producto $producto, ?string $rawCodigos): void

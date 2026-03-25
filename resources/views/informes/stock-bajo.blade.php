@@ -7,7 +7,7 @@
     <h2 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Productos con Stock Bajo</h2>
     <div class="d-flex flex-wrap gap-2">
         @if($productosBajoStock->isNotEmpty())
-            <a href="{{ route('informes.stock-bajo.exportar-csv', array_filter(['proveedor_id' => $proveedorFiltroId])) }}" class="btn btn-outline-primary">
+            <a href="{{ route('informes.stock-bajo.exportar-csv', array_filter(['proveedor_id' => $proveedorFiltroId, 'categoria_id' => $categoriaFiltroId])) }}" class="btn btn-outline-primary">
                 <i class="bi bi-download"></i> Exportar CSV
             </a>
         @endif
@@ -27,6 +27,17 @@
                     @foreach($proveedores as $proveedor)
                         <option value="{{ $proveedor->id }}" {{ (string) $proveedorFiltroId === (string) $proveedor->id ? 'selected' : '' }}>
                             {{ $proveedor->nombre }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <label for="categoria_id" class="form-label mb-1">Categoría</label>
+                <select name="categoria_id" id="categoria_id" class="form-select">
+                    <option value="">Todas las categorías</option>
+                    @foreach($categorias as $categoria)
+                        <option value="{{ $categoria->id }}" {{ (string) $categoriaFiltroId === (string) $categoria->id ? 'selected' : '' }}>
+                            {{ $categoria->nombre }}
                         </option>
                     @endforeach
                 </select>
@@ -98,10 +109,10 @@
                     @empty
                     <tr>
                         <td colspan="7" class="text-center text-muted">
-                            @if($proveedorFiltroId)
+                            @if($proveedorFiltroId || $categoriaFiltroId)
                                 <i class="bi bi-inbox fs-1"></i><br>
                                 <strong>Sin resultados</strong><br>
-                                No hay productos con stock bajo para el proveedor seleccionado.
+                                No hay productos con stock bajo para los filtros seleccionados (proveedor y/o categoría).
                             @else
                                 <i class="bi bi-check-circle text-success fs-1"></i><br>
                                 <strong>¡Excelente!</strong><br>

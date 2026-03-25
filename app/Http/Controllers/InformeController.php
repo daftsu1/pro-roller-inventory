@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Venta;
 use App\Models\Producto;
 use App\Models\Proveedor;
+use App\Models\Categoria;
 use App\Models\Cliente;
 use App\Models\DetalleVenta;
 use App\Models\MovimientoInventario;
@@ -97,26 +98,38 @@ class InformeController extends Controller
     public function stockBajo(Request $request)
     {
         $proveedorFiltroId = $this->resolveProveedorIdFiltro($request);
-        $productosBajoStock = $this->queryProductosBajoStock($proveedorFiltroId)->get();
+        $categoriaFiltroId = $this->resolveCategoriaIdFiltro($request);
+        $productosBajoStock = $this->queryProductosBajoStock($proveedorFiltroId, $categoriaFiltroId)->get();
         $proveedores = Proveedor::orderBy('nombre')->get();
+        $categorias = Categoria::orderBy('nombre')->get();
 
-        return view('informes.stock-bajo', compact('productosBajoStock', 'proveedores', 'proveedorFiltroId'));
+        return view('informes.stock-bajo', compact(
+            'productosBajoStock',
+            'proveedores',
+            'categorias',
+            'proveedorFiltroId',
+            'categoriaFiltroId'
+        ));
     }
 
     public function exportarStockBajoCsv(Request $request)
     {
         $proveedorFiltroId = $this->resolveProveedorIdFiltro($request);
-        $productos = $this->queryProductosBajoStock($proveedorFiltroId)->get();
+        $categoriaFiltroId = $this->resolveCategoriaIdFiltro($request);
+        $productos = $this->queryProductosBajoStock($proveedorFiltroId, $categoriaFiltroId)->get();
 
         if ($productos->isEmpty()) {
             return redirect()
-                ->route('informes.stock-bajo', array_filter(['proveedor_id' => $proveedorFiltroId]))
+                ->route('informes.stock-bajo', $this->stockBajoFiltrosQuery($proveedorFiltroId, $categoriaFiltroId))
                 ->with('warning', 'No hay productos para exportar con el filtro seleccionado.');
         }
 
         $filename = 'stock-bajo-' . now()->format('Y-m-d');
         if ($proveedorFiltroId !== null) {
             $filename .= '-proveedor-' . $proveedorFiltroId;
+        }
+        if ($categoriaFiltroId !== null) {
+            $filename .= '-categoria-' . $categoriaFiltroId;
         }
         $filename .= '.csv';
 
@@ -150,7 +163,29 @@ class InformeController extends Controller
         return Proveedor::whereKey($id)->exists() ? $id : null;
     }
 
-    private function queryProductosBajoStock(?int $proveedorId): Builder
+    private function resolveCategoriaIdFiltro(Request $request): ?int
+    {
+        if (! $request->filled('categoria_id')) {
+            return null;
+        }
+
+        $id = (int) $request->input('categoria_id');
+
+        return Categoria::whereKey($id)->exists() ? $id : null;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function stockBajoFiltrosQuery(?int $proveedorId, ?int $categoriaId): array
+    {
+        return array_filter([
+            'proveedor_id' => $proveedorId,
+            'categoria_id' => $categoriaId,
+        ], fn ($v) => $v !== null);
+    }
+
+    private function queryProductosBajoStock(?int $proveedorId, ?int $categoriaId): Builder
     {
         $query = Producto::query()
             ->with(['categoria', 'proveedor'])
@@ -160,6 +195,10 @@ class InformeController extends Controller
 
         if ($proveedorId !== null) {
             $query->where('proveedor_id', $proveedorId);
+        }
+
+        if ($categoriaId !== null) {
+            $query->where('categoria_id', $categoriaId);
         }
 
         return $query;
