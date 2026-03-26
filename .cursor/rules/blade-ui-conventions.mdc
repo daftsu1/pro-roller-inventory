@@ -1,0 +1,25 @@
+---
+description: Convenciones UI para vistas Blade en operacion diaria
+globs: resources/views/**/*.blade.php
+alwaysApply: false
+---
+
+# Blade UI
+
+## Objetivo
+
+Mantener coherencia visual y claridad operativa en pantallas de inventario.
+
+## Reglas
+
+- Mantener textos en espanol y tono directo para usuarios operativos.
+- Reusar patrones Bootstrap existentes (cards, tablas, badges, botones, alerts).
+- Conservar convenciones de acciones: ver, editar, activar/desactivar, confirmar acciones sensibles.
+- Preservar estado de filtros y formularios (`request()`, `old()`) cuando aplique.
+- Mostrar mensajes de exito/error/advertencia claros y accionables.
+- Mantener estructura legible de la vista; extraer parciales si la plantilla crece demasiado.
+
+## Evitar
+
+- Cambios de UX que rompan patrones ya usados en modulos similares.
+- Acciones peligrosas sin confirmacion explicita.

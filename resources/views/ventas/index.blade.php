@@ -507,7 +507,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            fetch(`{{ route('ventas.buscar-productos') }}?q=${encodeURIComponent(busqueda)}`, {
+            const ventaId = ventaActual?.id || '';
+            fetch(`{{ route('ventas.buscar-productos') }}?q=${encodeURIComponent(busqueda)}&venta_id=${encodeURIComponent(ventaId)}`, {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
                     'Accept': 'application/json'
@@ -533,15 +534,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 let html = '';
                 resultados.forEach(producto => {
                     const nombreEscapado = (producto.nombre || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    const stockDisponible = Number.isFinite(parseInt(producto.stock_disponible, 10))
+                        ? parseInt(producto.stock_disponible, 10)
+                        : parseInt(producto.stock_actual, 10);
                     html += `
                         <button type="button" 
                                 class="list-group-item list-group-item-action" 
-                                onclick="seleccionarProducto(${producto.id}, '${nombreEscapado}', ${producto.precio_venta}, ${producto.stock_actual}, '${producto.codigo}')">
+                                onclick="seleccionarProducto(${producto.id}, '${nombreEscapado}', ${producto.precio_venta}, ${stockDisponible}, '${producto.codigo}')">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <strong>${producto.nombre}</strong>
                                     <br>
-                                    <small class="text-muted">Código: ${producto.codigo} | Stock: ${producto.stock_actual} | Precio: $${parseFloat(producto.precio_venta).toLocaleString('es-CL')}</small>
+                                    <small class="text-muted">Código: ${producto.codigo} | Stock disponible: ${stockDisponible} | Precio: $${parseFloat(producto.precio_venta).toLocaleString('es-CL')}</small>
                                 </div>
                             </div>
                         </button>
@@ -573,7 +577,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Si hay un único resultado, seleccionarlo automáticamente
                 if (productosBusquedaActual.length === 1) {
                     const p = productosBusquedaActual[0];
-                    seleccionarProducto(p.id, p.nombre, p.precio_venta, p.stock_actual, p.codigo);
+                    const stockDisponible = Number.isFinite(parseInt(p.stock_disponible, 10))
+                        ? parseInt(p.stock_disponible, 10)
+                        : parseInt(p.stock_actual, 10);
+                    seleccionarProducto(p.id, p.nombre, p.precio_venta, stockDisponible, p.codigo);
                     e.preventDefault();
                 }
             }
@@ -892,9 +899,15 @@ function confirmarProducto() {
     }
     
     const cantidad = parseInt(document.getElementById('cantidad_producto').value);
+    const stockDisponible = parseInt(document.getElementById('cantidad_producto').max || '0', 10);
     
     if (!cantidad || cantidad < 1) {
         alert('La cantidad debe ser mayor a 0');
+        return;
+    }
+
+    if (cantidad > stockDisponible) {
+        alert(`Stock insuficiente. Stock disponible: ${stockDisponible}`);
         return;
     }
     

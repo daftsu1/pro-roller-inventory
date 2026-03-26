@@ -1,0 +1,24 @@
+---
+description: Convenciones de definicion y nombres de rutas Laravel
+globs: routes/**/*.php
+alwaysApply: false
+---
+
+# Rutas Laravel
+
+## Objetivo
+
+Conservar una capa de rutas predecible y estable para backend y vistas.
+
+## Reglas
+
+- Mantener convencion REST con `Route::resource` cuando aplique.
+- Para acciones especiales de negocio, usar rutas explicitas con nombre claro y consistente.
+- Reusar prefijos y nombres existentes para no romper enlaces en vistas/controladores.
+- Agrupar rutas privadas bajo middleware `auth` (y permisos cuando corresponda).
+- Mantener orden logico por modulo para facilitar mantenimiento.
+
+## Evitar
+
+- Duplicar responsabilidades entre rutas de modulos.
+- Renombrar rutas existentes sin necesidad funcional y sin ajustar consumidores.

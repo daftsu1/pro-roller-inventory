@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Venta;
 use App\Models\Producto;
+use App\Models\DetalleVenta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -105,6 +106,7 @@ class VentaController extends Controller
     public function buscarProductos(Request $request)
     {
         $termino = (string) $request->get('q', '');
+        $ventaId = $request->get('venta_id');
 
         if (trim($termino) === '') {
             return response()->json([
@@ -118,6 +120,22 @@ class VentaController extends Controller
             ->orderBy('nombre')
             ->limit(10)
             ->get();
+
+        $productos->transform(function ($producto) use ($ventaId) {
+            $cantidadEnVentasPendientes = DetalleVenta::where('producto_id', $producto->id)
+                ->whereHas('venta', function ($q) use ($ventaId) {
+                    $q->where('estado', 'pendiente');
+
+                    if ($ventaId) {
+                        $q->where('id', '!=', $ventaId);
+                    }
+                })
+                ->sum('cantidad');
+
+            $producto->stock_disponible = max(0, $producto->stock_actual - $cantidadEnVentasPendientes);
+
+            return $producto;
+        });
 
         return response()->json([
             'success' => true,

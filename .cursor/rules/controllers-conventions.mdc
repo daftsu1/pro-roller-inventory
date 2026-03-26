@@ -1,0 +1,26 @@
+---
+description: Convenciones para controladores Laravel del proyecto
+globs: app/Http/Controllers/**/*.php
+alwaysApply: false
+---
+
+# Controladores Laravel
+
+## Objetivo
+
+Mantener acciones legibles, seguras y consistentes para el dominio de inventario/ventas.
+
+## Reglas
+
+- Priorizar metodos cortos; extraer logica compleja a metodos privados o servicios.
+- Validar con `FormRequest` cuando la accion tenga reglas extensas o reutilizables.
+- Usar `DB::transaction` cuando se modifique stock o se creen movimientos asociados.
+- Registrar siempre trazabilidad de cambios de inventario.
+- Evitar consultas N+1 y usar `with()` para relaciones necesarias en vista.
+- Responder con redirects + flash messages claros en espanol.
+
+## Evitar
+
+- Logica de negocio extensa incrustada directamente en controladores.
+- Cambios de stock sin movimiento asociado.
+- Silenciar excepciones sin contexto ni feedback al usuario.
