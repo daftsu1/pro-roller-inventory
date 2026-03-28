@@ -62,3 +62,40 @@ La meta es mantener consistencia tecnica y funcional en nuevas features, fixes y
 - Cambios masivos de arquitectura sin requerimiento explicito.
 - Renombrados globales de rutas/simbolos sin necesidad funcional.
 - Migraciones irreversibles o eliminacion de historico de negocio.
+
+## Actualizacion funcional reciente (Venta Movil)
+
+### Alcance implementado
+
+- Se habilito una interfaz dedicada de venta rapida movil en `ventas.movil`.
+- El flujo reutiliza backend existente de ventas para mantener una sola fuente de verdad de stock y movimientos.
+- El enfoque actual prioriza velocidad operativa en mostrador y uso en pantalla pequena.
+
+### Reglas del flujo movil
+
+- La ruta `ventas.movil` debe mantenerse bajo `auth`.
+- `?nueva=1` crea una venta pendiente nueva de forma explicita.
+- `?venta_id=` permite continuar una pendiente especifica solo del usuario autenticado.
+- Si no se especifica venta, se puede cargar una pendiente reciente del usuario.
+- Mostrar listado de "Pendientes rapidas" colapsado por defecto para reducir ruido visual.
+
+### Integridad de stock en UI movil
+
+- La busqueda debe reflejar stock disponible considerando:
+  - reservas en otras ventas pendientes (logica backend existente), y
+  - cantidad ya agregada en la venta actual (ajuste frontend de disponibilidad para agregar).
+- No permitir agregar cantidad superior al stock disponible mostrado.
+- Completar venta siempre via endpoint existente de `completar` para asegurar trazabilidad en `MovimientoInventario`.
+
+### Criterios UX movil
+
+- Priorizar acciones de alta frecuencia: buscar, cantidad, agregar, eliminar, completar.
+- Mantener textos cortos y claros (evitar etiquetas largas en controles clave).
+- Usar feedback in-page (alertas bootstrap dentro de la vista) en lugar de depender de popups nativos cuando sea posible.
+- Mantener controles tactiles comodos (botones +/- para cantidad, CTA principal fijo al pie).
+- Evitar overlays o scripts globales agresivos que interfieran con modales y navegacion normal.
+
+### Estado funcional actual
+
+- Instalacion en venta movil: control tipo switch + monto editable, impactando total via `ventas.actualizar`.
+- Cliente en venta movil: pendiente de definicion funcional (no bloquear flujo actual por este punto).

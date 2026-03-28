@@ -1,16 +1,16 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ProductoController;
-use App\Http\Controllers\VentaController;
-use App\Http\Controllers\MovimientoInventarioController;
-use App\Http\Controllers\UserController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\ClienteController;
-use App\Http\Controllers\ProveedorController;
-use App\Http\Controllers\InformeController;
 use App\Http\Controllers\ConteoFisicoController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InformeController;
+use App\Http\Controllers\MovimientoInventarioController;
+use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\ProveedorController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\VentaController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,23 +24,24 @@ Route::get('/', function () {
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    
+
     // Productos (sin borrado físico: basurero = desactivar)
     Route::post('productos/{producto}/desactivar', [ProductoController::class, 'desactivar'])->name('productos.desactivar');
     Route::post('productos/{producto}/reactivar', [ProductoController::class, 'reactivar'])->name('productos.reactivar');
     Route::resource('productos', ProductoController::class)->except(['destroy']);
-    
+
     // Categorías
     Route::resource('categorias', CategoriaController::class);
-    
+
     // Clientes
     Route::resource('clientes', ClienteController::class);
-    
+
     // Proveedores
     Route::resource('proveedores', ProveedorController::class);
-    
+
     // Ventas
     Route::get('ventas/buscar-productos', [VentaController::class, 'buscarProductos'])->name('ventas.buscar-productos');
+    Route::get('ventas/movil', [VentaController::class, 'movil'])->name('ventas.movil');
     Route::resource('ventas', VentaController::class)->except(['edit', 'update', 'store']);
     Route::get('ventas/{venta}/editar', [VentaController::class, 'editar'])->name('ventas.editar');
     Route::post('ventas/{venta}/completar', [VentaController::class, 'completar'])->name('ventas.completar');
@@ -51,13 +52,13 @@ Route::middleware(['auth'])->group(function () {
     Route::put('ventas/{venta}/actualizar-descuento-producto', [VentaController::class, 'actualizarDescuentoProducto'])->name('ventas.actualizar-descuento-producto');
     Route::post('ventas/{venta}/cerrar', [VentaController::class, 'cerrarVenta'])->name('ventas.cerrar');
     Route::get('ventas-filtrar', [VentaController::class, 'filtrar'])->name('ventas.filtrar');
-    
+
     // Movimientos de inventario
     Route::resource('movimientos', MovimientoInventarioController::class)->except(['edit', 'update', 'destroy']);
-    
+
     // Usuarios (solo para administradores)
     Route::resource('usuarios', UserController::class);
-    
+
     // Informes
     Route::get('informes', [InformeController::class, 'index'])->name('informes.index');
     Route::get('informes/ventas', [InformeController::class, 'ventas'])->name('informes.ventas');
@@ -66,7 +67,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('informes/stock-bajo/exportar-csv', [InformeController::class, 'exportarStockBajoCsv'])->name('informes.stock-bajo.exportar-csv');
     Route::get('informes/clientes', [InformeController::class, 'clientes'])->name('informes.clientes');
     Route::get('informes/resumen', [InformeController::class, 'resumen'])->name('informes.resumen');
-    
+
     // Conteos físicos
     Route::resource('conteos', ConteoFisicoController::class)->except(['edit', 'update', 'destroy']);
     Route::get('conteos/{conteo}/escanear', [ConteoFisicoController::class, 'escanear'])->name('conteos.escanear');

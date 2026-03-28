@@ -5,9 +5,14 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Ventas</h2>
-    <a href="{{ route('ventas.create') }}" class="btn btn-primary" id="btnNuevaVenta">
-        <i class="bi bi-plus-circle"></i> Nueva Venta
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{{ route('ventas.movil') }}" class="btn btn-outline-primary">
+            <i class="bi bi-phone"></i> Venta Móvil
+        </a>
+        <a href="{{ route('ventas.create') }}" class="btn btn-primary" id="btnNuevaVenta">
+            <i class="bi bi-plus-circle"></i> Nueva Venta
+        </a>
+    </div>
 </div>
 
 <!-- Filtros -->

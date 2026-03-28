@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Venta;
-use App\Models\Producto;
 use App\Models\DetalleVenta;
+use App\Models\Producto;
+use App\Models\Venta;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class VentaController extends Controller
 {
@@ -19,7 +18,7 @@ class VentaController extends Controller
     {
         // Por defecto mostrar pendientes (las nuevas ventas)
         $estadoFiltro = $request->get('estado', 'pendiente');
-        
+
         $query = Venta::with('usuario'); // Removemos detalles.producto para mejor rendimiento
 
         // Filtros
@@ -38,7 +37,7 @@ class VentaController extends Controller
         // Filtrar por estado
         if ($request->filled('estado') && $request->estado !== 'todas') {
             $query->where('estado', $request->estado);
-        } elseif (!$request->filled('estado')) {
+        } elseif (! $request->filled('estado')) {
             // Por defecto mostrar pendientes (las nuevas ventas)
             $query->where('estado', 'pendiente');
         }
@@ -49,16 +48,16 @@ class VentaController extends Controller
             ->latest('id')
             ->paginate(20)
             ->withQueryString(); // Mantener filtros en la paginación
-        
+
         // Ventas pendientes (para el contador)
         $ventasPendientes = Venta::where('estado', 'pendiente')->count();
-        
+
         // Productos para el modal de venta
         $productos = Producto::where('activo', true)
             ->where('stock_actual', '>', 0)
             ->orderBy('nombre')
             ->get();
-        
+
         // Clientes para búsqueda en el modal de venta
         $clientes = \App\Models\Cliente::where('activo', true)
             ->orderBy('nombre')
@@ -69,21 +68,51 @@ class VentaController extends Controller
 
     public function create()
     {
-        // Crear venta pendiente vacía inmediatamente
-        $ultimaVenta = Venta::latest('id')->first();
-        $numeroFactura = 'VENT-' . str_pad(($ultimaVenta?->id ?? 0) + 1, 6, '0', STR_PAD_LEFT);
-        
-        $venta = Venta::create([
-            'numero_factura' => $numeroFactura,
-            'fecha' => today(),
-            'total' => 0,
-            'usuario_id' => auth()->id(),
-            'estado' => 'pendiente',
-        ]);
+        $venta = $this->crearVentaPendiente();
 
         // Redirigir al modal de edición de esta venta
         return redirect()->route('ventas.index', ['editar_venta' => $venta->id])
             ->with('venta_activa', $venta->id);
+    }
+
+    public function movil(Request $request)
+    {
+        $venta = null;
+        $forzarNueva = $request->boolean('nueva');
+        $seleccionAutomaticaPendiente = false;
+
+        if ($forzarNueva) {
+            $venta = $this->crearVentaPendiente();
+        } elseif ($request->filled('venta_id')) {
+            $venta = Venta::where('id', $request->venta_id)
+                ->where('estado', 'pendiente')
+                ->where('usuario_id', auth()->id())
+                ->first();
+        }
+
+        if (! $venta) {
+            $venta = Venta::where('estado', 'pendiente')
+                ->where('usuario_id', auth()->id())
+                ->latest('id')
+                ->first();
+            $seleccionAutomaticaPendiente = ! $request->filled('venta_id');
+        }
+
+        if (! $venta) {
+            $venta = $this->crearVentaPendiente();
+            $seleccionAutomaticaPendiente = false;
+        }
+
+        $venta->load('detalles.producto');
+        $ventasPendientes = Venta::where('estado', 'pendiente')
+            ->where('usuario_id', auth()->id())
+            ->with('detalles:id,venta_id,cantidad')
+            ->latest('id')
+            ->limit(6)
+            ->get();
+        $mostrarAvisoPendiente = $seleccionAutomaticaPendiente && $venta->detalles->isNotEmpty();
+
+        return view('ventas.movil', compact('venta', 'ventasPendientes', 'mostrarAvisoPendiente'));
     }
 
     public function editar(Venta $venta)
@@ -96,10 +125,10 @@ class VentaController extends Controller
             ->select('id', 'codigo', 'nombre', 'precio_venta', 'stock_actual')
             ->orderBy('nombre')
             ->get();
-        
+
         return response()->json([
             'venta' => $venta,
-            'productos' => $productos
+            'productos' => $productos,
         ]);
     }
 
@@ -154,33 +183,33 @@ class VentaController extends Controller
 
         try {
             $producto = Producto::findOrFail($validated['producto_id']);
-            
+
             // Calcular stock disponible (stock actual - cantidad en otras ventas pendientes)
             $cantidadEnVentasPendientes = \App\Models\DetalleVenta::where('producto_id', $producto->id)
-                ->whereHas('venta', function($q) use ($venta) {
+                ->whereHas('venta', function ($q) use ($venta) {
                     $q->where('estado', 'pendiente')
-                      ->where('id', '!=', $venta->id); // Excluir la venta actual
+                        ->where('id', '!=', $venta->id); // Excluir la venta actual
                 })
                 ->sum('cantidad');
-            
+
             $stockDisponible = $producto->stock_actual - $cantidadEnVentasPendientes;
-            
+
             // Verificar si ya existe el producto en la venta
             $detalleExistente = $venta->detalles()->where('producto_id', $producto->id)->first();
-            
+
             // Calcular cantidad total que tendría este producto en la venta
             $cantidadTotalEnVenta = ($detalleExistente ? $detalleExistente->cantidad : 0) + $validated['cantidad'];
-            
+
             // Validar stock disponible
             if ($cantidadTotalEnVenta > $stockDisponible) {
                 return response()->json([
                     'success' => false,
                     'message' => "Stock insuficiente. Stock disponible: {$stockDisponible} (considerando otras ventas pendientes)",
                     'stock_disponible' => $stockDisponible,
-                    'stock_actual' => $producto->stock_actual
+                    'stock_actual' => $producto->stock_actual,
                 ], 400);
             }
-            
+
             // Calcular descuentos
             $descuentoPorcentaje = $validated['descuento_porcentaje'] ?? 0;
             $descuentoMonto = $validated['descuento_monto'] ?? 0;
@@ -188,7 +217,7 @@ class VentaController extends Controller
             if ($detalleExistente) {
                 // Actualizar cantidad
                 $detalleExistente->increment('cantidad', $validated['cantidad']);
-                
+
                 // Recalcular subtotal con descuentos
                 $subtotal = Venta::calcularSubtotalConDescuento(
                     $detalleExistente->cantidad,
@@ -196,11 +225,11 @@ class VentaController extends Controller
                     $descuentoPorcentaje,
                     $descuentoMonto
                 );
-                
+
                 $detalleExistente->update([
                     'descuento_porcentaje' => $descuentoPorcentaje,
                     'descuento_monto' => $descuentoMonto,
-                    'subtotal' => $subtotal
+                    'subtotal' => $subtotal,
                 ]);
             } else {
                 // Calcular subtotal con descuentos
@@ -210,7 +239,7 @@ class VentaController extends Controller
                     $descuentoPorcentaje,
                     $descuentoMonto
                 );
-                
+
                 // Crear nuevo detalle
                 $venta->detalles()->create([
                     'producto_id' => $producto->id,
@@ -232,12 +261,12 @@ class VentaController extends Controller
                 'venta' => $venta->fresh()->load('detalles.producto'),
                 'total' => number_format($venta->total, 2),
                 'stock_disponible' => $stockDisponible - $cantidadTotalEnVenta, // Stock restante después de agregar
-                'warning' => $stockDisponible - $cantidadTotalEnVenta < 5 ? 'Queda poco stock disponible después de agregar este producto' : null
+                'warning' => $stockDisponible - $cantidadTotalEnVenta < 5 ? 'Queda poco stock disponible después de agregar este producto' : null,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }
@@ -246,17 +275,17 @@ class VentaController extends Controller
     {
         // Leer detalle_id del JSON o del input
         $detalleId = $request->input('detalle_id');
-        
-        if (!$detalleId) {
+
+        if (! $detalleId) {
             // Intentar leer del JSON body
             $json = $request->json()->all();
             $detalleId = $json['detalle_id'] ?? null;
         }
-        
-        if (!$detalleId) {
+
+        if (! $detalleId) {
             return response()->json([
                 'success' => false,
-                'message' => 'detalle_id es requerido'
+                'message' => 'detalle_id es requerido',
             ], 400);
         }
 
@@ -272,12 +301,12 @@ class VentaController extends Controller
             return response()->json([
                 'success' => true,
                 'venta' => $venta->fresh()->load('detalles.producto'),
-                'total' => number_format($venta->total, 2)
+                'total' => number_format($venta->total, 2),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }
@@ -301,7 +330,7 @@ class VentaController extends Controller
             'cliente_nombre' => $validated['cliente_nombre'] ?? null,
             'cliente_documento' => $validated['cliente_documento'] ?? null,
         ];
-        
+
         // Si se proporciona cliente_id, usarlo; si es null, limpiar la relación
         if (isset($validated['cliente_id'])) {
             $updateData['cliente_id'] = $validated['cliente_id'];
@@ -318,7 +347,7 @@ class VentaController extends Controller
         // Instalación: si no tiene instalación, monto = 0; si tiene y monto vacío, usar valor por defecto
         $tieneInstalacion = filter_var($validated['tiene_instalacion'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $updateData['tiene_instalacion'] = $tieneInstalacion;
-        if (!$tieneInstalacion) {
+        if (! $tieneInstalacion) {
             $updateData['monto_instalacion'] = 0;
         } else {
             $monto = $validated['monto_instalacion'] ?? null;
@@ -334,7 +363,7 @@ class VentaController extends Controller
         return response()->json([
             'success' => true,
             'venta' => $venta->fresh(),
-            'total' => number_format($venta->total, 2)
+            'total' => number_format($venta->total, 2),
         ]);
     }
 
@@ -351,10 +380,10 @@ class VentaController extends Controller
 
         try {
             $detalle = $venta->detalles()->findOrFail($validated['detalle_id']);
-            
+
             $descuentoPorcentaje = $validated['descuento_porcentaje'] ?? $detalle->descuento_porcentaje ?? 0;
             $descuentoMonto = $validated['descuento_monto'] ?? $detalle->descuento_monto ?? 0;
-            
+
             // Recalcular subtotal con descuentos
             $subtotal = Venta::calcularSubtotalConDescuento(
                 $detalle->cantidad,
@@ -362,11 +391,11 @@ class VentaController extends Controller
                 $descuentoPorcentaje,
                 $descuentoMonto
             );
-            
+
             $detalle->update([
                 'descuento_porcentaje' => $descuentoPorcentaje,
                 'descuento_monto' => $descuentoMonto,
-                'subtotal' => $subtotal
+                'subtotal' => $subtotal,
             ]);
 
             // Recalcular total de la venta
@@ -377,12 +406,12 @@ class VentaController extends Controller
             return response()->json([
                 'success' => true,
                 'venta' => $venta->load('detalles.producto'),
-                'total' => number_format($venta->total, 2)
+                'total' => number_format($venta->total, 2),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }
@@ -391,7 +420,7 @@ class VentaController extends Controller
     {
         // Cerrar el modal y redirigir
         return redirect()->route('ventas.index', ['estado' => 'pendiente'])
-            ->with('success', 'Venta #' . $venta->numero_factura . ' guardada como pendiente. Puedes completarla cuando esté lista.');
+            ->with('success', 'Venta #'.$venta->numero_factura.' guardada como pendiente. Puedes completarla cuando esté lista.');
     }
 
     public function store(Request $request)
@@ -416,17 +445,18 @@ class VentaController extends Controller
 
             // Cerrar modal y redirigir
             return redirect()->route('ventas.index')
-                ->with('success', 'Venta creada como pendiente (Factura: ' . $venta->numero_factura . '). Recuerda completarla para descontar el stock.');
+                ->with('success', 'Venta creada como pendiente (Factura: '.$venta->numero_factura.'). Recuerda completarla para descontar el stock.');
         } catch (\Exception $e) {
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Error al crear la venta: ' . $e->getMessage());
+                ->with('error', 'Error al crear la venta: '.$e->getMessage());
         }
     }
 
     public function show(Venta $venta)
     {
         $venta->load('usuario', 'detalles.producto', 'movimientos');
+
         return view('ventas.show', compact('venta'));
     }
 
@@ -434,27 +464,27 @@ class VentaController extends Controller
     {
         try {
             $venta->completar();
-            
+
             if (request()->ajax()) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Venta completada exitosamente. El stock ha sido descontado.',
-                    'venta' => $venta->fresh()->load('detalles.producto')
+                    'venta' => $venta->fresh()->load('detalles.producto'),
                 ]);
             }
-            
+
             return redirect()->route('ventas.index', ['estado' => 'pendiente'])
-                ->with('success', 'Venta #' . $venta->numero_factura . ' completada exitosamente. El stock ha sido descontado.');
+                ->with('success', 'Venta #'.$venta->numero_factura.' completada exitosamente. El stock ha sido descontado.');
         } catch (\Exception $e) {
             if (request()->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $e->getMessage()
+                    'message' => $e->getMessage(),
                 ], 400);
             }
-            
+
             return redirect()->back()
-                ->with('error', 'Error al completar la venta: ' . $e->getMessage());
+                ->with('error', 'Error al completar la venta: '.$e->getMessage());
         }
     }
 
@@ -462,27 +492,27 @@ class VentaController extends Controller
     {
         try {
             $venta->cancelar();
-            
+
             if (request()->ajax()) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Venta cancelada exitosamente. El stock ha sido devuelto.',
-                    'venta' => $venta->fresh()->load('detalles.producto')
+                    'venta' => $venta->fresh()->load('detalles.producto'),
                 ]);
             }
-            
+
             return redirect()->route('ventas.index', ['estado' => 'completada'])
-                ->with('success', 'Venta #' . $venta->numero_factura . ' cancelada exitosamente. El stock ha sido devuelto.');
+                ->with('success', 'Venta #'.$venta->numero_factura.' cancelada exitosamente. El stock ha sido devuelto.');
         } catch (\Exception $e) {
             if (request()->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $e->getMessage()
+                    'message' => $e->getMessage(),
                 ], 400);
             }
-            
+
             return redirect()->back()
-                ->with('error', 'Error al cancelar la venta: ' . $e->getMessage());
+                ->with('error', 'Error al cancelar la venta: '.$e->getMessage());
         }
     }
 
@@ -493,42 +523,42 @@ class VentaController extends Controller
             if (request()->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Solo se pueden eliminar ventas pendientes'
+                    'message' => 'Solo se pueden eliminar ventas pendientes',
                 ], 400);
             }
-            
+
             return redirect()->route('ventas.index')
                 ->with('error', 'Solo se pueden eliminar ventas pendientes.');
         }
 
         try {
             $numeroFactura = $venta->numero_factura;
-            
+
             // Eliminar detalles de venta (cascade debería hacerlo automáticamente, pero por si acaso)
             $venta->detalles()->delete();
-            
+
             // Eliminar la venta
             $venta->delete();
 
             if (request()->ajax()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Venta eliminada exitosamente.'
+                    'message' => 'Venta eliminada exitosamente.',
                 ]);
             }
 
             return redirect()->route('ventas.index', ['estado' => 'pendiente'])
-                ->with('success', 'Venta #' . $numeroFactura . ' eliminada exitosamente.');
+                ->with('success', 'Venta #'.$numeroFactura.' eliminada exitosamente.');
         } catch (\Exception $e) {
             if (request()->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error al eliminar la venta: ' . $e->getMessage()
+                    'message' => 'Error al eliminar la venta: '.$e->getMessage(),
                 ], 400);
             }
 
             return redirect()->back()
-                ->with('error', 'Error al eliminar la venta: ' . $e->getMessage());
+                ->with('error', 'Error al eliminar la venta: '.$e->getMessage());
         }
     }
 
@@ -551,7 +581,7 @@ class VentaController extends Controller
 
         if ($request->filled('estado') && $request->estado !== 'todas') {
             $query->where('estado', $request->estado);
-        } elseif (!$request->filled('estado')) {
+        } elseif (! $request->filled('estado')) {
             $query->where('estado', 'pendiente');
         }
 
@@ -566,5 +596,19 @@ class VentaController extends Controller
         }
 
         return redirect()->route('ventas.index', $request->all());
+    }
+
+    private function crearVentaPendiente(): Venta
+    {
+        $ultimaVenta = Venta::latest('id')->first();
+        $numeroFactura = 'VENT-'.str_pad(($ultimaVenta?->id ?? 0) + 1, 6, '0', STR_PAD_LEFT);
+
+        return Venta::create([
+            'numero_factura' => $numeroFactura,
+            'fecha' => today(),
+            'total' => 0,
+            'usuario_id' => auth()->id(),
+            'estado' => 'pendiente',
+        ]);
     }
 }

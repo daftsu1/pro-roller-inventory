@@ -80,9 +80,11 @@
             height: 100%;
             background: rgba(0,0,0,0.5);
             z-index: 999;
+            pointer-events: none;
         }
         .sidebar-overlay.show {
             display: block;
+            pointer-events: auto;
         }
         .mobile-header {
             display: none !important; /* Bootstrap .d-flex usa !important */
@@ -123,6 +125,13 @@
                 align-items: center;
             }
         }
+        @media (min-width: 576px) {
+            .sidebar-overlay,
+            .sidebar-overlay.show {
+                display: none !important;
+                pointer-events: none !important;
+            }
+        }
         .table-responsive {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
@@ -146,7 +155,7 @@
 <body>
     @auth
     <!-- Overlay para móviles -->
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar-overlay d-sm-none" id="sidebarOverlay" onclick="toggleSidebar()"></div>
     
     <!-- Header móvil -->
     <div class="mobile-header justify-content-between align-items-center">
@@ -184,6 +193,11 @@
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('ventas.*') ? 'active' : '' }}" href="{{ route('ventas.index') }}">
                                 <i class="bi bi-cart"></i> Ventas
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('ventas.movil') ? 'active' : '' }}" href="{{ route('ventas.movil') }}">
+                                <i class="bi bi-phone"></i> Venta Móvil
                             </a>
                         </li>
                         
@@ -316,12 +330,20 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
+            if (window.innerWidth > 575) {
+                sidebar.classList.remove('show');
+                overlay.classList.remove('show');
+                return;
+            }
             sidebar.classList.toggle('show');
             overlay.classList.toggle('show');
         }
         
         // Cerrar sidebar al hacer clic en un enlace (móviles)
         document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
             if (window.innerWidth <= 575) {
                 const navLinks = document.querySelectorAll('.sidebar .nav-link');
                 navLinks.forEach(link => {
@@ -333,18 +355,10 @@
             
             // Ajustar sidebar en resize
             window.addEventListener('resize', function() {
-                if (window.innerWidth > 575) {
-                    const sidebar = document.getElementById('sidebar');
-                    const overlay = document.getElementById('sidebarOverlay');
-                    sidebar.classList.remove('show');
-                    overlay.classList.remove('show');
-                } else {
-                    // Si vuelve a ser pantalla pequeña, cerrar el sidebar por defecto
-                    const sidebar = document.getElementById('sidebar');
-                    const overlay = document.getElementById('sidebarOverlay');
-                    sidebar.classList.remove('show');
-                    overlay.classList.remove('show');
-                }
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                sidebar.classList.remove('show');
+                overlay.classList.remove('show');
             });
         });
     </script>
